@@ -6,3 +6,5 @@
 Создание виртуального окружения bash python -m venv venv venv\Scripts\activate
 Установка зависимостей bash pip install -r requirements.txt
 Запуск приложения bash python app.py Доступ к приложению После запуска приложение будет доступно по адресу http://localhost:8080
+
+Ссылка на видео: https://vkvideo.ru/video-235867269_456239019?list=ln-ZV3zZDoDg1wU24Mrfw
