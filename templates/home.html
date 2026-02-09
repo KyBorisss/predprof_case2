@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Школьное питание - Главная</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 20px;
+        }
+        .hero {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            padding: 60px 0;
+            border-radius: 15px;
+            margin-bottom: 40px;
+        }
+        .feature-card {
+            transition: transform 0.3s;
+            height: 100%;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Контейнер для flash-уведомлений -->
+    <div class="flash-container" style="position: fixed; top: 20px; right: 20px; z-index: 1050; width: 350px;">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show flash-alert mb-2" role="alert" style="box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                        <div class="d-flex align-items-center">
+                            {% if category == 'success' %}
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                            {% elif category == 'danger' %}
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            {% elif category == 'warning' %}
+                                <i class="bi bi-exclamation-circle-fill me-2"></i>
+                            {% elif category == 'info' %}
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                            {% endif %}
+                            <span>{{ message }}</span>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/home">
+                <i class="bi bi-egg-fried"></i> Школьное питание
+            </a>
+
+            <div class="navbar-nav ms-auto">
+                {% if current_user.is_authenticated %}
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle"></i> {{ current_user.username }}
+                        <span class="badge bg-primary">{{ current_user.role }}</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ url_for('dashboard') }}"><i class="bi bi-speedometer2"></i> Панель управления</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right"></i> Выйти</a></li>
+                    </ul>
+                </div>
+                {% else %}
+                <div class="nav-item">
+                    <a class="nav-link" href="{{ url_for('login') }}"><i class="bi bi-box-arrow-in-right"></i> Войти</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5 pt-5">
+        <!-- Герой секция -->
+        <div class="hero text-center">
+            <h1 class="display-4 fw-bold">
+                <i class="bi bi-egg-fried"></i> Система школьного питания
+            </h1>
+            <p class="lead">Автоматизированная система учета и организации питания в школе</p>
+            <div class="mt-4">
+                {% if not current_user.is_authenticated %}
+                    <a href="/login" class="btn btn-light btn-lg mx-2">
+                        <i class="bi bi-box-arrow-in-right"></i> Войти в систему
+                    </a>
+                    <a href="/register" class="btn btn-outline-light btn-lg mx-2">
+                        <i class="bi bi-person-plus"></i> Зарегистрироваться
+                    </a>
+                {% else %}
+                    <a href="/dashboard" class="btn btn-light btn-lg mx-2">
+                        <i class="bi bi-speedometer2"></i> Перейти в панель управления
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Функциональность -->
+        <div class="row mt-5">
+            <div class="col-md-4 mb-4">
+                <div class="card feature-card">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-person-circle display-4 text-primary"></i>
+                        </div>
+                        <h4 class="card-title">Для учеников</h4>
+                        <p class="card-text">
+                            Просмотр меню, заказ питания, указание аллергий,
+                            оставление отзывов и многое другое
+                        </p>
+                        {% if not current_user.is_authenticated %}
+                            <a href="/login" class="btn btn-primary">Войти как ученик</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="card feature-card">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-egg-fried display-4 text-success"></i>
+                        </div>
+                        <h4 class="card-title">Для поваров</h4>
+                        <p class="card-text">
+                            Учет выданного питания, контроль инвентаря,
+                            создание заявок на закупку продуктов
+                        </p>
+                        {% if not current_user.is_authenticated %}
+                            <a href="/login" class="btn btn-success">Войти как повар</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="card feature-card">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-gear display-4 text-warning"></i>
+                        </div>
+                        <h4 class="card-title">Для администраторов</h4>
+                        <p class="card-text">
+                            Статистика, утверждение заявок, формирование отчетов,
+                            мониторинг работы системы
+                        </p>
+                        {% if not current_user.is_authenticated %}
+                            <a href="/login" class="btn btn-warning">Войти как администратор</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Информация о системе -->
+        <div class="row mt-5">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">
+                            <i class="bi bi-lightbulb"></i> Функциональность системы
+                        </h4>
+                        <ul>
+                            <li>Автоматизация процессов питания</li>
+                            <li>Прозрачность для всех участников</li>
+                            <li>Учет пищевых особенностей учеников</li>
+                            <li>Контроль инвентаря и закупок</li>
+                            <li>Детальная статистика и отчетность</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">
+                            <i class="bi bi-shield-check"></i> Безопасность
+                        </h4>
+                        <ul>
+                            <li>Разделение прав доступа по ролям</li>
+                            <li>Защита персональных данных</li>
+                            <li>Безопасное хранение паролей</li>
+                            <li>Контроль доступа к информации</li>
+                            <li>Резервное копирование данных</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Автоматическое скрытие flash-уведомлений через 5 секунд
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                var alerts = document.querySelectorAll('.flash-alert');
+                alerts.forEach(function(alert) {
+                    var bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                });
+            }, 5000);
+        });
+    </script>
+</body>
+</html>

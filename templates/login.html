@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block auth_content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-lg">
+            <div class="card-body p-4">
+                <h3 class="card-title text-center mb-4">Вход в систему</h3>
+
+                <!-- Flash-уведомления теперь отображаются вверху страницы -->
+
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.username.label(class="form-label fw-bold") }}
+                        {{ form.username(class="form-control form-control-lg", placeholder="Введите имя пользователя") }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.password.label(class="form-label fw-bold") }}
+                        {{ form.password(class="form-control form-control-lg", placeholder="Введите пароль") }}
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        {{ form.remember(class="form-check-input") }}
+                        {{ form.remember.label(class="form-check-label") }}
+                    </div>
+
+                    <div class="d-grid mb-3">
+                        {{ form.submit(class="btn btn-primary btn-lg") }}
+                    </div>
+                </form>
+
+                <div class="text-center mt-3">
+                    <p>Нет аккаунта? <a href="{{ url_for('register') }}" class="text-primary">Зарегистрироваться</a></p>
+                </div>
+
+                <hr class="my-4">
+                <div class="text-center text-muted small">
+                    <p>Тестовые пользователи:</p>
+                    <p>Ученик: student / Student123!</p>
+                    <p>Повар: chef / Chef123!</p>
+                    <p>Администратор: admin / Admin123!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

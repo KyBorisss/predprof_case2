@@ -1,0 +1,632 @@
+{% extends "base.html" %}
+
+{% block title %}Отчеты - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Отчеты и аналитика</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <small class="text-muted me-3">Период: {{ start_of_week }} - {{ end_of_week }}</small>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+    </div>
+</div>
+
+<!-- Общая статистика -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Продано блюд</h6>
+                        <h2 class="mb-0">{{ total_weekly_sales }}</h2>
+                        <small>{{ "%.2f"|format(total_weekly_revenue) }} ₽</small>
+                    </div>
+                    <i class="bi bi-cart-check display-6"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Испорчено блюд</h6>
+                        <h2 class="mb-0">{{ total_spoiled }}</h2>
+                        <small>за неделю</small>
+                    </div>
+                    <i class="bi bi-trash display-6"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Закупки</h6>
+                        <h2 class="mb-0">{{ purchase_summary|length }}</h2>
+                        <small>позиций</small>
+                    </div>
+                    <i class="bi bi-box-seam display-6"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Абонементы</h6>
+                        <h2 class="mb-0">{{ total_subscriptions_count }}</h2>
+                        <small>{{ "%.2f"|format(total_subscriptions_revenue) }} ₽</small>
+                    </div>
+                    <i class="bi bi-ticket-perforated display-6"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Основная информация в табах -->
+<ul class="nav nav-tabs" id="reportsTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="sales-tab" data-bs-toggle="tab" data-bs-target="#sales" type="button">
+            <i class="bi bi-cart-check"></i> Продажи блюд
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="spoiled-tab" data-bs-toggle="tab" data-bs-target="#spoiled" type="button">
+            <i class="bi bi-trash"></i> Испорченные блюда
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="purchases-tab" data-bs-toggle="tab" data-bs-target="#purchases" type="button">
+            <i class="bi bi-box-seam"></i> Закупки продуктов
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="subscriptions-tab" data-bs-toggle="tab" data-bs-target="#subscriptions" type="button">
+            <i class="bi bi-ticket-perforated"></i> Абонементы
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="daily-tab" data-bs-toggle="tab" data-bs-target="#daily" type="button">
+            <i class="bi bi-calendar-week"></i> По дням недели
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content mt-3" id="reportsTabContent">
+    <!-- Вкладка 1: Продажи блюд -->
+    <div class="tab-pane fade show active" id="sales" role="tabpanel">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Продажи блюд за неделю</h5>
+                        <span class="badge bg-primary">Всего: {{ total_weekly_sales }}</span>
+                    </div>
+                    <div class="card-body">
+                        {% if weekly_orders %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Блюдо</th>
+                                        <th>Продано порций</th>
+                                        <th>Выручка</th>
+                                        <th>Доля продаж</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for order in weekly_orders %}
+                                    <tr>
+                                        <td>{{ order.name }}</td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ order.sold_count }}</span>
+                                        </td>
+                                        <td>{{ "%.2f"|format(order.revenue or 0) }} ₽</td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                {% if total_weekly_sales > 0 %}
+                                                    {% set percentage = (order.sold_count / total_weekly_sales * 100)|round|int %}
+                                                    <div class="progress-bar bg-info" style="width: {{ percentage }}%">
+                                                        {{ percentage }}%
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Нет данных о продажах за эту неделю
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Популярные блюда</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if popular_meals %}
+                        <div class="list-group">
+                            {% for meal in popular_meals %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ meal.name }}
+                                <span class="badge bg-primary rounded-pill">{{ meal.orders_count }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted">Нет данных</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5>Сводка по продажам</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Общее количество продаж
+                                <span class="badge bg-primary rounded-pill">{{ total_weekly_sales }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Общая выручка
+                                <span class="badge bg-success rounded-pill">{{ "%.2f"|format(total_weekly_revenue) }} ₽</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Средняя цена продажи
+                                <span class="badge bg-info rounded-pill">
+                                    {% if total_weekly_sales > 0 %}
+                                        {{ "%.2f"|format(total_weekly_revenue / total_weekly_sales) }} ₽
+                                    {% else %}
+                                        0 ₽
+                                    {% endif %}
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Вкладка 2: Испорченные блюда -->
+    <div class="tab-pane fade" id="spoiled" role="tabpanel">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Испорченные блюда за неделю</h5>
+                        <span class="badge bg-warning">Всего: {{ total_spoiled }} порций</span>
+                    </div>
+                    <div class="card-body">
+                        {% if spoiled_meals %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Блюдо</th>
+                                                <th>Испорчено порций</th>
+                                                <th>Доля от общего количества</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for meal in spoiled_meals %}
+                                            <tr>
+                                                <td>{{ meal.name }}</td>
+                                                <td>
+                                                    <span class="badge bg-warning">{{ meal.spoiled_count }}</span>
+                                                </td>
+                                                <td>
+                                                    <div class="progress" style="height: 20px;">
+                                                        {% if total_spoiled > 0 %}
+                                                            {% set percentage = (meal.spoiled_count / total_spoiled * 100)|round|int %}
+                                                            <div class="progress-bar bg-warning" style="width: {{ percentage }}%">
+                                                                {{ percentage }}%
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-warning">
+                                    <h6><i class="bi bi-exclamation-triangle"></i> Анализ потерь:</h6>
+                                    <p>
+                                        Общее количество испорченных порций: <strong>{{ total_spoiled }}</strong>
+                                    </p>
+                                    {% if total_weekly_sales > 0 %}
+                                        {% set spoilage_rate = (total_spoiled / (total_weekly_sales + total_spoiled) * 100)|round(1) %}
+                                        <p>
+                                            Уровень потерь: <strong>{{ spoilage_rate }}%</strong> от общего производства
+                                        </p>
+                                    {% endif %}
+                                    <div class="mt-3">
+                                        <h6>Рекомендации:</h6>
+                                        <ul class="small mb-0">
+                                            <li>Уменьшите приготовление блюд с высоким уровнем потерь</li>
+                                            <li>Скорректируйте прогноз продаж</li>
+                                            <li>Проверьте условия хранения</li>
+                                            <li>Оптимизируйте сроки годности</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle"></i> Отличная работа! На этой неделе не было испорченных блюд.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Вкладка 3: Закупки продуктов -->
+    <div class="tab-pane fade" id="purchases" role="tabpanel">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Закупки продуктов за неделю</h5>
+                        <span class="badge bg-success">{{ purchase_summary|length }} позиций</span>
+                    </div>
+                    <div class="card-body">
+                        {% if weekly_purchases %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Продукт</th>
+                                        <th>Количество</th>
+                                        <th>Единица</th>
+                                        <th>Статус</th>
+                                        <th>Примечания</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for purchase in weekly_purchases %}
+                                    <tr>
+                                        <td>{{ purchase.ingredient }}</td>
+                                        <td>{{ "%.1f"|format(purchase.quantity) }}</td>
+                                        <td>{{ purchase.unit }}</td>
+                                        <td>
+                                            <span class="badge bg-success">Одобрена</span>
+                                        </td>
+                                        <td>
+                                            <small>{{ purchase.notes|truncate(50) if purchase.notes else '—' }}</small>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> На этой неделе не было закупок продуктов
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Сводка по закупкам</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if purchase_summary %}
+                        <div class="list-group">
+                            {% for item, quantity in purchase_summary.items() %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ item }}
+                                <span class="badge bg-success">{{ "%.1f"|format(quantity) }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="mt-3">
+                            <div class="alert alert-info small">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Всего закуплено:</strong> {{ purchase_summary|length }} различных продуктов
+                            </div>
+                        </div>
+                        {% else %}
+                        <p class="text-muted">Нет данных о закупках</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5>Статистика закупок</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Всего позиций
+                                <span class="badge bg-primary rounded-pill">{{ weekly_purchases|length }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Утвержденные заявки
+                                <span class="badge bg-success rounded-pill">{{ weekly_purchases|length }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Разных продуктов
+                                <span class="badge bg-info rounded-pill">{{ purchase_summary|length }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Вкладка 4: Абонементы -->
+    <div class="tab-pane fade" id="subscriptions" role="tabpanel">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Продажи абонементов за неделю</h5>
+                        <span class="badge bg-info">Всего: {{ total_subscriptions_count }}</span>
+                    </div>
+                    <div class="card-body">
+                        {% if weekly_subscriptions %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Тип абонемента</th>
+                                        <th>Количество проданных</th>
+                                        <th>Выручка</th>
+                                        <th>Средняя стоимость</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for sub in weekly_subscriptions %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-{% if sub.meal_type == 'завтрак' %}primary{% else %}success{% endif %}">
+                                                {{ sub.meal_type|capitalize }}
+                                            </span>
+                                        </td>
+                                        <td>{{ sub.count }}</td>
+                                        <td>{{ "%.2f"|format(sub.revenue or 0) }} ₽</td>
+                                        <td>
+                                            {% if sub.count > 0 %}
+                                                {{ "%.2f"|format((sub.revenue or 0) / sub.count) }} ₽
+                                            {% else %}
+                                                0 ₽
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="table-dark">
+                                    <tr>
+                                        <td><strong>Итого</strong></td>
+                                        <td><strong>{{ total_subscriptions_count }}</strong></td>
+                                        <td><strong>{{ "%.2f"|format(total_subscriptions_revenue) }} ₽</strong></td>
+                                        <td>
+                                            <strong>
+                                                {% if total_subscriptions_count > 0 %}
+                                                    {{ "%.2f"|format(total_subscriptions_revenue / total_subscriptions_count) }} ₽
+                                                {% else %}
+                                                    0 ₽
+                                                {% endif %}
+                                            </strong>
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> На этой неделе не было продано абонементов
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Эффективность абонементов</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if total_weekly_revenue > 0 %}
+                            {% set subscription_percentage = (total_subscriptions_revenue / total_weekly_revenue * 100)|round(1) %}
+                            <div class="text-center mb-4">
+                                <div class="display-4 text-info">{{ subscription_percentage }}%</div>
+                                <p class="text-muted">Доля абонементов в общей выручке</p>
+                            </div>
+                        {% endif %}
+
+                        <div class="alert alert-info">
+                            <h6><i class="bi bi-lightbulb"></i> Анализ:</h6>
+                            <ul class="small mb-0">
+                                <li>Абонементы обеспечивают стабильный доход</li>
+                                <li>Снижают нагрузку на ежедневные платежи</li>
+                                <li>Увеличивают лояльность клиентов</li>
+                                <li>Позволяют лучше планировать производство</li>
+                            </ul>
+                        </div>
+
+                        <div class="mt-3">
+                            <h6>Рекомендации:</h6>
+                            <ul class="small">
+                                <li>Продвигайте абонементы через акции</li>
+                                <li>Предлагайте скидки на длительные периоды</li>
+                                <li>Информируйте о выгоде абонементов</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Вкладка 5: По дням недели -->
+    <div class="tab-pane fade" id="daily" role="tabpanel">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Статистика по дням недели</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>День недели</th>
+                                        <th>Дата</th>
+                                        <th>Количество заказов</th>
+                                        <th>Выручка</th>
+                                        <th>Средний чек</th>
+                                        <th>График активности</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for day in daily_stats %}
+                                    <tr>
+                                        <td><strong>{{ day.day }}</strong></td>
+                                        <td>{{ day.date }}</td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ day.orders }}</span>
+                                        </td>
+                                        <td>{{ "%.2f"|format(day.revenue) }} ₽</td>
+                                        <td>
+                                            {% if day.orders > 0 %}
+                                                {{ "%.2f"|format(day.revenue / day.orders) }} ₽
+                                            {% else %}
+                                                0 ₽
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                {% set max_orders = daily_stats|map(attribute='orders')|max %}
+                                                {% if max_orders > 0 %}
+                                                    {% set width = (day.orders / max_orders * 100)|round|int %}
+                                                    <div class="progress-bar bg-info" style="width: {{ width }}%">
+                                                        {{ width }}%
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="table-dark">
+                                    <tr>
+                                        <td><strong>Итого за неделю</strong></td>
+                                        <td></td>
+                                        <td><strong>{{ daily_stats|sum(attribute='orders') }}</strong></td>
+                                        <td><strong>{{ "%.2f"|format(daily_stats|sum(attribute='revenue')) }} ₽</strong></td>
+                                        <td>
+                                            <strong>
+                                                {% set total_orders = daily_stats|sum(attribute='orders') %}
+                                                {% set total_rev = daily_stats|sum(attribute='revenue') %}
+                                                {% if total_orders > 0 %}
+                                                    {{ "%.2f"|format(total_rev / total_orders) }} ₽
+                                                {% else %}
+                                                    0 ₽
+                                                {% endif %}
+                                            </strong>
+                                        </td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6>Самый прибыльный день</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {% set best_day = daily_stats|max(attribute='revenue') %}
+                                        <div class="text-center">
+                                            <h4 class="text-success">{{ best_day.day }}</h4>
+                                            <p class="mb-1">{{ "%.2f"|format(best_day.revenue) }} ₽</p>
+                                            <small class="text-muted">{{ best_day.date }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6>Самый активный день</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {% set busiest_day = daily_stats|max(attribute='orders') %}
+                                        <div class="text-center">
+                                            <h4 class="text-primary">{{ busiest_day.day }}</h4>
+                                            <p class="mb-1">{{ busiest_day.orders }} заказов</p>
+                                            <small class="text-muted">{{ busiest_day.date }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+function exportReport(type) {
+    alert('Экспорт данных "' + type + '" (в реальной системе здесь будет генерация файла)');
+}
+
+function printReport() {
+    window.print();
+}
+
+// Сохранение активной вкладки при перезагрузке
+document.addEventListener('DOMContentLoaded', function() {
+    var triggerTabList = [].slice.call(document.querySelectorAll('#reportsTab button'));
+    triggerTabList.forEach(function (triggerEl) {
+        var tabTrigger = new bootstrap.Tab(triggerEl);
+        triggerEl.addEventListener('click', function (event) {
+            event.preventDefault();
+            tabTrigger.show();
+        });
+    });
+});
+</script>
+{% endblock %}

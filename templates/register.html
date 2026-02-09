@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block auth_content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-lg">
+            <div class="card-body p-4">
+                <h3 class="text-center mb-4">Регистрация</h3>
+                
+                <!-- Flash-уведомления теперь отображаются вверху страницы -->
+                
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.username.label(class="form-label fw-bold") }}
+                        {{ form.username(class="form-control form-control-lg", placeholder="Имя пользователя (3-64 символа)") }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.email.label(class="form-label fw-bold") }}
+                        {{ form.email(class="form-control form-control-lg", placeholder="Email") }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.grade.label(class="form-label fw-bold") }}
+                        {{ form.grade(class="form-control form-control-lg", placeholder="10А, 11Б и т.д.") }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.password.label(class="form-label fw-bold") }}
+                        {{ form.password(class="form-control form-control-lg", placeholder="Пароль (минимум 6 символов)") }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.confirm_password.label(class="form-label fw-bold") }}
+                        {{ form.confirm_password(class="form-control form-control-lg", placeholder="Подтвердите пароль") }}
+                    </div>
+
+                    <div class="d-grid mb-3">
+                        <button type="submit" class="btn btn-primary btn-lg">Зарегистрироваться</button>
+                    </div>
+                </form>
+
+                <div class="text-center mt-3">
+                    <p>Уже есть аккаунт? <a href="{{ url_for('login') }}" class="text-primary">Войти</a></p>
+                </div>
+
+                <div class="text-center">
+                    <a href="{{ url_for('home') }}" class="btn btn-secondary">На главную</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

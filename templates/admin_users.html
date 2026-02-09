@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Управление пользователями - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Управление пользователями</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+        <a href="{{ url_for('add_user') }}" class="btn btn-sm btn-success ms-2">
+            <i class="bi bi-person-plus"></i> Добавить пользователя
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>Все пользователи ({{ users|length }})</h5>
+                <div>
+                    <span class="badge bg-primary">Ученики: {{ users|selectattr('role', 'equalto', 'ученик')|list|length }}</span>
+                    <span class="badge bg-success ms-1">Повара: {{ users|selectattr('role', 'equalto', 'повар')|list|length }}</span>
+                    <span class="badge bg-warning ms-1">Админы: {{ users|selectattr('role', 'equalto', 'администратор')|list|length }}</span>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if users %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Имя пользователя</th>
+                                <th>Email</th>
+                                <th>Роль</th>
+                                <th>Класс</th>
+                                <th>Баланс</th>
+                                <th>Дата регистрации</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr class="{% if user.role == 'администратор' %}table-warning{% elif user.role == 'повар' %}table-success{% endif %}">
+                                <td>{{ user.id }}</td>
+                                <td>
+                                    <strong>{{ user.username }}</strong>
+                                    {% if user.id == current_user.id %}
+                                    <span class="badge bg-info">Вы</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    <span class="badge bg-{% if user.role == 'администратор' %}warning{% elif user.role == 'повар' %}success{% else %}primary{% endif %}">
+                                        {{ user.role }}
+                                    </span>
+                                </td>
+                                <td>{{ user.grade or '—' }}</td>
+                                <td>{{ "%.2f"|format(user.balance) }} ₽</td>
+                                <td>{{ user.created_at.strftime('%d.%m.%Y') }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn btn-primary">
+                                            <i class="bi bi-pencil"></i> Изменить
+                                        </a>
+                                        {% if user.id != current_user.id %}
+                                        <a href="{{ url_for('delete_user', user_id=user.id) }}" class="btn btn-danger" onclick="return confirm('Вы уверены, что хотите удалить пользователя {{ user.username }}?')">
+                                            <i class="bi bi-trash"></i> Удалить
+                                        </a>
+                                        {% else %}
+                                        <button class="btn btn-secondary" disabled>
+                                            <i class="bi bi-x-circle"></i> Нельзя удалить
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-people display-4 text-muted"></i>
+                    <h5 class="mt-3">Пользователей нет</h5>
+                    <p class="text-muted">Добавьте первого пользователя.</p>
+                    <a href="{{ url_for('add_user') }}" class="btn btn-success">
+                        <i class="bi bi-person-plus"></i> Добавить пользователя
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

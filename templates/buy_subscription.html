@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+
+{% block title %}Абонемент - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Покупка абонемента</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('student_dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Выбор абонемента</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="subscriptionForm">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.meal_type.label(class="form-label") }}
+                        {{ form.meal_type(class="form-select") }}
+                        <small class="text-muted">Выберите тип питания для абонемента</small>
+                        
+                        <!-- Предупреждение о существующем активном абонементе -->
+                        {% if active_subscriptions_info %}
+                            {% for meal_type, info in active_subscriptions_info.items() %}
+                                {% if info.exists %}
+                                    <div class="alert alert-warning mt-2" id="warning-{{ meal_type }}" style="display: none;">
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                        <strong>У вас уже есть активный абонемент на {{ meal_type }}!</strong><br>
+                                        Действует до: {{ info.end_date }} (осталось {{ info.days_left }} дней)<br>
+                                        Использовано на неделе: {{ info.used_meals }}/{{ info.meals_per_week }}
+                                        <br><br>
+                                        <small>
+                                            Вы не можете купить новый абонемент этого типа, пока не закончится текущий.
+                                        </small>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.weeks.label(class="form-label") }}
+                        {{ form.weeks(class="form-select") }}
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle"></i> Информация об абонементе:</h6>
+                        <ul class="mb-0 small">
+                            <li>Абонемент дает право на 1 прием пищи в день выбранного типа</li>
+                            <li>Включает основное блюдо И напиток</li>
+                            <li>Действует только в учебные дни (понедельник-пятница)</li>
+                            <li>Максимум 5 приемов пищи в неделю</li>
+                            <li>Можно выбрать любой напиток из меню</li>
+                            <li>При покупке нового абонемента старый того же типа деактивируется</li>
+                            <li>Нельзя иметь несколько активных абонементов одного типа</li>
+                        </ul>
+                    </div>
+
+                    <div id="priceCalculation" class="alert alert-warning">
+                        <h6>Стоимость абонемента:</h6>
+                        <p id="priceDetails">Выберите тип питания и количество недель</p>
+                        <h4 id="totalPrice" class="text-primary mb-0">0 руб.</h4>
+                    </div>
+
+                    <div class="alert alert-danger" id="subscriptionWarning" style="display: none;">
+                        <h6><i class="bi bi-exclamation-octagon"></i> Внимание!</h6>
+                        <p id="warningText" class="mb-0">
+                            У вас уже есть активный абонемент этого типа. Пожалуйста, дождитесь его окончания.
+                        </p>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success btn-lg" id="submitButton">
+                            <i class="bi bi-ticket-perforated"></i> Купить абонемент
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Тарифы</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <div class="card text-center h-100 border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="card-title mb-0">Завтрак</h5>
+                            </div>
+                            <div class="card-body">
+                                <h2 class="text-primary">200 ₽</h2>
+                                <p class="small">в неделю</p>
+                                <ul class="list-unstyled small text-start">
+                                    <li><i class="bi bi-check text-success"></i> 5 завтраков в неделю</li>
+                                    <li><i class="bi bi-check text-success"></i> Основное блюдо + напиток</li>
+                                    <li><i class="bi bi-check text-success"></i> Экономия 20%</li>
+                                    <li><i class="bi bi-check text-success"></i> Любой напиток из меню</li>
+                                    <li><i class="bi bi-check text-success"></i> Действует пн-пт</li>
+                                    <li><i class="bi bi-x text-danger"></i> Только 1 активный абонемент</li>
+                                </ul>
+                                <div class="mt-3">
+                                    <small class="text-muted">Примерная экономия: 40-60 руб. в день</small>
+                                </div>
+                                
+                                <!-- Информация о существующем абонементе -->
+                                {% if active_subscriptions_info and active_subscriptions_info['завтрак'].exists %}
+                                <div class="alert alert-warning mt-3">
+                                    <h6><i class="bi bi-info-circle"></i> Ваш активный абонемент:</h6>
+                                    <p class="mb-1 small">
+                                        Действует до: {{ active_subscriptions_info['завтрак'].end_date }}<br>
+                                        Осталось дней: {{ active_subscriptions_info['завтрак'].days_left }}<br>
+                                        Использовано: {{ active_subscriptions_info['завтрак'].used_meals }}/5
+                                    </p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12 mb-3">
+                        <div class="card text-center h-100 border-success">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="card-title mb-0">Обед</h5>
+                            </div>
+                            <div class="card-body">
+                                <h2 class="text-success">350 ₽</h2>
+                                <p class="small">в неделю</p>
+                                <ul class="list-unstyled small text-start">
+                                    <li><i class="bi bi-check text-success"></i> 5 обедов в неделю</li>
+                                    <li><i class="bi bi-check text-success"></i> Основное блюдо + напиток</li>
+                                    <li><i class="bi bi-check text-success"></i> Экономия 25%</li>
+                                    <li><i class="bi bi-check text-success"></i> Любой напиток из меню</li>
+                                    <li><i class="bi bi-check text-success"></i> Действует пн-пт</li>
+                                    <li><i class="bi bi-x text-danger"></i> Только 1 активный абонемент</li>
+                                </ul>
+                                <div class="mt-3">
+                                    <small class="text-muted">Примерная экономия: 70-90 руб. в день</small>
+                                </div>
+                                
+                                <!-- Информация о существующем абонементе -->
+                                {% if active_subscriptions_info and active_subscriptions_info['обед'].exists %}
+                                <div class="alert alert-warning mt-3">
+                                    <h6><i class="bi bi-info-circle"></i> Ваш активный абонемент:</h6>
+                                    <p class="mb-1 small">
+                                        Действует до: {{ active_subscriptions_info['обед'].end_date }}<br>
+                                        Осталось дней: {{ active_subscriptions_info['обед'].days_left }}<br>
+                                        Использовано: {{ active_subscriptions_info['обед'].used_meals }}/5
+                                    </p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-3">
+                    <h6><i class="bi bi-info-circle"></i> Как это работает:</h6>
+                    <ol class="mb-0 small">
+                        <li>Вы покупаете абонемент на определенный срок</li>
+                        <li>Каждый учебный день можете получить 1 бесплатный прием пищи выбранного типа</li>
+                        <li>При заказе выбираете основное блюдо и любой напиток</li>
+                        <li>Если не использовали прием в какой-то день - он не переносится</li>
+                        <li>Абонемент действует только в учебные дни (пн-пт)</li>
+                        <li><strong>Нельзя иметь несколько активных абонементов одного типа</strong></li>
+                        <li>Новый абонемент можно купить только после окончания текущего</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Ваши текущие абонементы</h5>
+            </div>
+            <div class="card-body">
+                {% if subscriptions %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Тип</th>
+                                <th>Начало</th>
+                                <th>Окончание</th>
+                                <th>Использовано</th>
+                                <th>Осталось дней</th>
+                                <th>Статус</th>
+                                <th>Можно купить новый</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sub in subscriptions %}
+                            {% set days_left = (sub.end_date - date.today()).days %}
+                            <tr class="{% if sub.is_active %}table-success{% else %}table-secondary{% endif %}">
+                                <td>{{ sub.meal_type }}</td>
+                                <td>{{ sub.start_date.strftime('%d.%m.%Y') }}</td>
+                                <td>{{ sub.end_date.strftime('%d.%m.%Y') }}</td>
+                                <td>
+                                    {{ sub.used_meals }}/{{ sub.meals_per_week }}
+                                    <div class="progress" style="height: 5px;">
+                                        <div class="progress-bar {% if sub.used_meals >= sub.meals_per_week %}bg-danger{% else %}bg-info{% endif %}"
+                                             style="width: {{ (sub.used_meals / sub.meals_per_week * 100)|round }}%">
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if days_left > 0 %}
+                                        <span class="badge bg-primary">{{ days_left }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">0</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if sub.is_active %}
+                                        {% if sub.used_meals >= sub.meals_per_week %}
+                                            <span class="badge bg-warning">Лимит использован</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Активен</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-secondary">Завершен</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if sub.is_active %}
+                                        {% if days_left > 0 %}
+                                            <span class="badge bg-danger">Нет</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Да</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-success">Да</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-info mt-3">
+                    <h6><i class="bi bi-lightbulb"></i> Статистика:</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <small>Всего абонементов: <strong>{{ subscriptions|length }}</strong></small>
+                        </div>
+                        <div class="col-md-6">
+                            <small>Активных: <strong>{{ subscriptions|selectattr('is_active')|list|length }}</strong></small>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-12">
+                            <small><strong>Важно:</strong> Вы не можете купить новый абонемент того же типа, пока активен текущий.</small>
+                        </div>
+                    </div>
+                </div>
+
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-ticket display-4 text-muted"></i>
+                    <h5 class="mt-3">Нет активных абонементов</h5>
+                    <p class="text-muted">Купите свой первый абонемент и экономьте на питании!</p>
+                    <div class="mt-3">
+                        <div class="alert alert-warning">
+                            <h6>Почему стоит купить абонемент?</h6>
+                            <ul class="mb-0 small">
+                                <li>Экономия 20-25% на каждом приеме пищи</li>
+                                <li>Не нужно каждый раз оплачивать заказ</li>
+                                <li>Гарантированное питание каждый день</li>
+                                <li>Включает и блюдо, и напиток</li>
+                                <li>Можно купить только один активный абонемент каждого типа</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const mealTypeSelect = document.querySelector('select[name="meal_type"]');
+    const weeksSelect = document.querySelector('select[name="weeks"]');
+    const priceDetails = document.getElementById('priceDetails');
+    const totalPrice = document.getElementById('totalPrice');
+    const priceCalculation = document.getElementById('priceCalculation');
+    const subscriptionWarning = document.getElementById('subscriptionWarning');
+    const warningText = document.getElementById('warningText');
+    const submitButton = document.getElementById('submitButton');
+    const subscriptionForm = document.getElementById('subscriptionForm');
+
+    // Цены за неделю
+    const weeklyPrices = {
+        'завтрак': 200,
+        'обед': 350
+    };
+
+    // Названия типов питания для отображения
+    const mealTypeNames = {
+        'завтрак': 'Завтрак',
+        'обед': 'Обед'
+    };
+
+    // Информация о существующих абонементах
+    const existingSubscriptions = {
+        'завтрак': {% if active_subscriptions_info and active_subscriptions_info['завтрак'].exists %}true{% else %}false{% endif %},
+        'обед': {% if active_subscriptions_info and active_subscriptions_info['обед'].exists %}true{% else %}false{% endif %}
+    };
+
+    // Данные о существующих абонементах
+    const subscriptionData = {
+        'завтрак': {
+            exists: {% if active_subscriptions_info and active_subscriptions_info['завтрак'].exists %}true{% else %}false{% endif %},
+            end_date: "{{ active_subscriptions_info['завтрак'].end_date if active_subscriptions_info and active_subscriptions_info['завтрак'].exists else '' }}",
+            days_left: {% if active_subscriptions_info and active_subscriptions_info['завтрак'].exists %}{{ active_subscriptions_info['завтрак'].days_left }}{% else %}0{% endif %}
+        },
+        'обед': {
+            exists: {% if active_subscriptions_info and active_subscriptions_info['обед'].exists %}true{% else %}false{% endif %},
+            end_date: "{{ active_subscriptions_info['обед'].end_date if active_subscriptions_info and active_subscriptions_info['обед'].exists else '' }}",
+            days_left: {% if active_subscriptions_info and active_subscriptions_info['обед'].exists %}{{ active_subscriptions_info['обед'].days_left }}{% else %}0{% endif %}
+        }
+    };
+
+    function checkExistingSubscription() {
+        const mealType = mealTypeSelect.value;
+        const hasExisting = existingSubscriptions[mealType] || false;
+        
+        // Скрываем/показываем предупреждения для каждого типа
+        Object.keys(existingSubscriptions).forEach(type => {
+            const warningDiv = document.getElementById(`warning-${type}`);
+            if (warningDiv) {
+                if (type === mealType && existingSubscriptions[type]) {
+                    warningDiv.style.display = 'block';
+                } else {
+                    warningDiv.style.display = 'none';
+                }
+            }
+        });
+        
+        if (hasExisting) {
+            const data = subscriptionData[mealType];
+            mealTypeSelect.classList.add('is-invalid');
+            subscriptionWarning.style.display = 'block';
+            warningText.innerHTML = `
+                У вас уже есть активный абонемент на ${mealTypeNames[mealType]}, 
+                который действует до ${data.end_date} (осталось ${data.days_left} дней).<br>
+                <strong>Вы не можете купить новый абонемент этого типа, пока не закончится текущий.</strong>
+            `;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="bi bi-x-circle"></i> Нельзя купить (уже есть активный)';
+            submitButton.classList.remove('btn-success');
+            submitButton.classList.add('btn-secondary');
+        } else {
+            mealTypeSelect.classList.remove('is-invalid');
+            subscriptionWarning.style.display = 'none';
+            submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="bi bi-ticket-perforated"></i> Купить абонемент';
+            submitButton.classList.remove('btn-secondary');
+            submitButton.classList.add('btn-success');
+        }
+    }
+
+    function calculatePrice() {
+        const mealType = mealTypeSelect.value;
+        const weeks = parseInt(weeksSelect.value) || 1;
+
+        if (mealType && weeklyPrices[mealType]) {
+            const weeklyPrice = weeklyPrices[mealType];
+            const total = weeklyPrice * weeks;
+            const mealTypeName = mealTypeNames[mealType] || mealType;
+
+            // Расчет экономии
+            const dailySavings = mealType === 'завтрак' ? 50 : 80; // Примерная экономия в день
+            const totalSavings = dailySavings * 5 * weeks; // 5 дней в неделю
+
+            priceDetails.innerHTML = `
+                <strong>${mealTypeName}</strong>: ${weeklyPrice} руб./неделя<br>
+                × ${weeks} недель<br>
+                <small class="text-success">Примерная экономия: ${totalSavings} руб.</small>
+            `;
+
+            totalPrice.textContent = `${total} руб.`;
+
+            // Подсветка в зависимости от типа
+            if (mealType === 'завтрак') {
+                priceCalculation.className = 'alert alert-primary mb-3';
+            } else {
+                priceCalculation.className = 'alert alert-success mb-3';
+            }
+        } else {
+            priceDetails.textContent = 'Выберите тип питания и количество недель';
+            totalPrice.textContent = '0 руб.';
+            priceCalculation.className = 'alert alert-warning mb-3';
+        }
+    }
+
+    // Обработчики изменений
+    mealTypeSelect.addEventListener('change', function() {
+        calculatePrice();
+        checkExistingSubscription();
+    });
+    
+    weeksSelect.addEventListener('change', calculatePrice);
+
+    // Обработчик отправки формы
+    subscriptionForm.addEventListener('submit', function(e) {
+        const mealType = mealTypeSelect.value;
+        const hasExisting = existingSubscriptions[mealType] || false;
+        
+        if (hasExisting) {
+            e.preventDefault();
+            alert(`У вас уже есть активный абонемент на ${mealTypeNames[mealType]}. Пожалуйста, дождитесь его окончания.`);
+            return false;
+        }
+        
+        return true;
+    });
+
+    // Инициализация
+    calculatePrice();
+    checkExistingSubscription();
+});
+</script>
+{% endblock %}

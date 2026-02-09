@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Аллергии - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Мои аллергии и предпочтения</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Добавить аллергию</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.allergen.label(class="form-label") }}
+                        {{ form.allergen(class="form-control", placeholder="Например: арахис, молоко, глютен") }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.severity.label(class="form-label") }}
+                        {{ form.severity(class="form-select") }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.notes.label(class="form-label") }}
+                        {{ form.notes(class="form-control", rows=3, placeholder="Дополнительная информация, симптомы и т.д.") }}
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Добавить аллергию
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>Мои аллергии</h5>
+                <span class="badge bg-primary">{{ allergies|length }}</span>
+            </div>
+            <div class="card-body">
+                {% if allergies %}
+                <div class="list-group">
+                    {% for allergy in allergies %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <div>
+                                <h6 class="mb-1">{{ allergy.allergen }}</h6>
+                                <span class="badge bg-{% if allergy.severity == 'тяжелая' %}danger{% elif allergy.severity == 'средняя' %}warning{% else %}info{% endif %}">
+                                    {{ allergy.severity }}
+                                </span>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('edit_allergy', allergy_id=allergy.id) }}" class="btn btn-primary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{{ url_for('delete_allergy', allergy_id=allergy.id) }}"
+                                   class="btn btn-danger"
+                                   onclick="return confirm('Удалить аллергию на {{ allergy.allergen }}?')">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% if allergy.notes %}
+                        <p class="mb-1 small">{{ allergy.notes }}</p>
+                        {% endif %}
+                        <small class="text-muted">Добавлено: {{ allergy.user.created_at.strftime('%d.%m.%Y') }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-check-circle display-4 text-success"></i>
+                    <h5 class="mt-3">Аллергии не указаны</h5>
+                    <p class="text-muted">Если у вас есть пищевые ограничения, добавьте их в форму слева.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

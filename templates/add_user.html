@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Добавление пользователя - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Добавление нового пользователя</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад к списку
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Основная информация</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Имя пользователя:</label>
+                        <input type="text" class="form-control" name="username" required
+                               placeholder="Введите уникальное имя пользователя">
+                        <small class="text-muted">Имя пользователя должно быть уникальным</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Email:</label>
+                        <input type="email" class="form-control" name="email" required
+                               placeholder="user@example.com">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Пароль:</label>
+                        <input type="password" class="form-control" name="password" required
+                               placeholder="Минимум 6 символов">
+                        <small class="text-muted">Пароль будет зашифрован перед сохранением</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Роль:</label>
+                        <select class="form-select" name="role" required>
+                            <option value="ученик" selected>Ученик</option>
+                            <option value="повар">Повар</option>
+                            <option value="администратор">Администратор</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Класс/Группа:</label>
+                        <input type="text" class="form-control" name="grade"
+                               placeholder="10А, 11Б, Повар и т.д.">
+                        <small class="text-muted">Опционально, для учеников - класс, для сотрудников - должность</small>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <h6><i class="bi bi-exclamation-triangle"></i> Важно!</h6>
+                        <p class="mb-0 small">
+                            После создания пользователя он сможет войти в систему
+                            с указанными логином и паролем.
+                        </p>
+                    </div>
+
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-person-plus"></i> Добавить пользователя
+                    </button>
+                    <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">Отмена</a>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Информация о ролях</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h6><span class="badge bg-primary">Ученик</span></h6>
+                    <p class="small">Доступ к функциям:</p>
+                    <ul class="small">
+                        <li>Просмотр меню</li>
+                        <li>Заказ питания</li>
+                        <li>Указание аллергий</li>
+                        <li>Оставление отзывов</li>
+                        <li>Просмотр уведомлений</li>
+                    </ul>
+                </div>
+
+                <div class="mb-4">
+                    <h6><span class="badge bg-success">Повар</span></h6>
+                    <p class="small">Доступ к функциям:</p>
+                    <ul class="small">
+                        <li>Все функции ученика</li>
+                        <li>Учет выданного питания</li>
+                        <li>Контроль инвентаря</li>
+                        <li>Создание заявок на закупку</li>
+                        <li>Просмотр заказов на сегодня</li>
+                    </ul>
+                </div>
+
+                <div class="mb-4">
+                    <h6><span class="badge bg-warning">Администратор</span></h6>
+                    <p class="small">Доступ к функциям:</p>
+                    <ul class="small">
+                        <li>Все функции повара</li>
+                        <li>Управление пользователями</li>
+                        <li>Просмотр статистики</li>
+                        <li>Утверждение заявок на закупку</li>
+                        <li>Формирование отчетов</li>
+                        <li>Настройки системы</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-lightbulb"></i> Совет</h6>
+                    <p class="mb-0 small">
+                        Для тестирования системы рекомендуется создать пользователей
+                        разных ролей и проверить их функционал.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

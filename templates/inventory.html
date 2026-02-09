@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Инвентарь - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Управление инвентарем</h1>
+</div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Текущий инвентарь</h5>
+            </div>
+            <div class="card-body">
+                {% if inventory %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Продукт</th>
+                                <th>Количество</th>
+                                <th>Минимум</th>
+                                <th>Статус</th>
+                                <th>Обновлено</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in inventory %}
+                            <tr class="{% if item.quantity <= item.min_quantity * 0.5 %}table-danger{% elif item.quantity <= item.min_quantity %}table-warning{% endif %}">
+                                <td>{{ item.ingredient }}</td>
+                                <td>{{ "%.1f"|format(item.quantity) }} {{ item.unit }}</td>
+                                <td>{{ "%.1f"|format(item.min_quantity) }} {{ item.unit }}</td>
+                                <td>
+                                    {% if item.quantity <= item.min_quantity * 0.5 %}
+                                    <span class="badge bg-danger">Критично</span>
+                                    {% elif item.quantity <= item.min_quantity %}
+                                    <span class="badge bg-warning">Низкий</span>
+                                    {% else %}
+                                    <span class="badge bg-success">Норма</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.last_updated.strftime('%d.%m.%Y') if item.last_updated else '—' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-box display-4 text-muted"></i>
+                    <h5 class="mt-3">Инвентарь пуст</h5>
+                    <p class="text-muted">Добавьте продукты используя форму слева.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Приготовленные блюда - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Приготовленные блюда</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('chef_dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+        <a href="{{ url_for('prepare_meal') }}" class="btn btn-sm btn-success ms-2">
+            <i class="bi bi-plus-circle"></i> Приготовить новое
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Сводка по блюдам (на сегодня: {{ today.strftime('%d.%m.%Y') }})</h5>
+            </div>
+            <div class="card-body">
+                {% if meals_summary %}
+                <div class="row">
+                    {% for meal_name, quantity in meals_summary.items() %}
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">{{ meal_name }}</h6>
+                                <h2 class="text-primary">{{ quantity }}</h2>
+                                <p class="small mb-0">порций доступно</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-egg display-4 text-muted"></i>
+                    <h5 class="mt-3">Нет приготовленных блюд</h5>
+                    <p class="text-muted">Приготовьте первое блюдо.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Детальная информация</h5>
+            </div>
+            <div class="card-body">
+                {% if prepared %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Дата приготовления</th>
+                                <th>Блюдо</th>
+                                <th>Порций</th>
+                                <th>Приготовил</th>
+                                <th>Срок годности</th>
+                                <th>Статус</th>
+                                <th>Примечания</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pm in prepared %}
+                            <tr class="{% if pm.expiry_date and pm.expiry_date < today %}table-danger{% elif pm.quantity == 0 %}table-secondary{% endif %}">
+                                <td>{{ pm.prepared_date.strftime('%d.%m.%Y') }}</td>
+                                <td>{{ pm.meal.name }}</td>
+                                <td>
+                                    <span class="badge bg-{% if pm.quantity > 10 %}success{% elif pm.quantity > 0 %}warning{% else %}secondary{% endif %}">
+                                        {{ pm.quantity }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if pm.preparer %}
+                                        {{ pm.preparer.username }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if pm.expiry_date %}
+                                        {{ pm.expiry_date.strftime('%d.%m.%Y') }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if pm.expiry_date and pm.expiry_date < today %}
+                                        <span class="badge bg-danger">Просрочено</span>
+                                    {% elif pm.quantity == 0 %}
+                                        <span class="badge bg-secondary">Закончилось</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Доступно</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if pm.notes %}
+                                        <small>{{ pm.notes|truncate(30) }}</small>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-egg-fried display-4 text-muted"></i>
+                    <h5 class="mt-3">Нет данных</h5>
+                    <p class="text-muted">Приготовленные блюда появятся здесь.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

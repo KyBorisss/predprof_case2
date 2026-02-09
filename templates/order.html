@@ -1,0 +1,387 @@
+{% extends "base.html" %}
+
+{% block title %}Заказ питания - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Заказ питания</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('student_dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <div class="btn-group" role="group">
+                    <a href="{{ url_for('order', type='завтрак') }}" 
+                       class="btn btn-sm {% if meal_type == 'завтрак' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Завтрак
+                    </a>
+                    <a href="{{ url_for('order', type='обед') }}" 
+                       class="btn btn-sm {% if meal_type == 'обед' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Обед
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="orderForm">
+                    {{ form.hidden_tag() }}
+                    
+                    <input type="hidden" name="meal_type" value="{{ meal_type }}">
+
+                    <div class="mb-3">
+                        <label class="form-label">Выберите основное блюдо:</label>
+                        <select class="form-select" name="meal_id" id="meal_id" required>
+                            <option value="">Выберите блюдо...</option>
+                            {% for meal in available_meals %}
+                            <option value="{{ meal.id }}" 
+                                    data-price="{{ meal.price }}"
+                                    data-available="{{ meal.get_available_quantity() }}">
+                                {{ meal.name }} ({{ meal.price }} руб.) - {{ meal.get_available_quantity() }} порций доступно
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div id="mealAvailability" class="mt-1 small"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Выберите напиток:</label>
+                        <select class="form-select" name="drink_id" id="drink_id">
+                            <option value="">Без напитка</option>
+                            {% for drink in drinks %}
+                            <option value="{{ drink.id }}" data-price="{{ drink.price }}">
+                                {{ drink.name }} ({{ drink.price }} руб.)
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Напиток включен в абонемент</small>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.meal_date.label(class="form-label") }}
+                        {{ form.meal_date(class="form-control", type="date", min=today.strftime('%Y-%m-%d')) }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Способ оплата:</label>
+                        <select class="form-select" name="payment_method" id="paymentMethod" required>
+                            {% for value, label in payment_methods %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+
+                        {% if can_use_subscription_today %}
+                        <div class="alert alert-success mt-2 small">
+                            <i class="bi bi-check-circle"></i> У вас есть активный абонемент на {{ meal_type }}!
+                            Вы можете получить питание бесплатно (блюдо + напиток).
+                            <br>
+                            <small>Использовано на этой неделе: {{ active_subscription.used_meals }}/{{ active_subscription.meals_per_week }}</small>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning mt-2 small">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            {% if not active_subscription %}
+                                У вас нет активного абонемента на {{ meal_type }}.
+                                <a href="{{ url_for('buy_subscription') }}">Купить абонемент</a>
+                            {% elif today_orders_with_subscription >= 1 %}
+                                Вы уже использовали абонемент сегодня.
+                            {% else %}
+                                Ваш абонемент не подходит для {{ meal_type }} или истек.
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div id="priceInfo" class="alert alert-info mb-3">
+                        <h6>Стоимость заказа:</h6>
+                        <p id="priceDetails">Выберите блюдо и напиток для расчета</p>
+                        <h5 id="totalPrice" class="text-primary mb-0">0 руб.</h5>
+                    </div>
+
+                    <div class="alert alert-warning" id="noPortionsWarning" style="display: none;">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Внимание!</strong> У этого блюда закончились приготовленные порции.
+                        Пожалуйста, выберите другое блюдо или зайдите позже.
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg" id="submitButton">
+                        <i class="bi bi-check-circle"></i> Подтвердить заказ
+                    </button>
+                    <a href="{{ url_for('student_dashboard') }}" class="btn btn-secondary">Отмена</a>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Ваша информация</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Баланс:</span>
+                        <strong>{{ "%.2f"|format(current_user.balance) }} ₽</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Класс:</span>
+                        <strong>{{ current_user.grade }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Заказов по абонементу сегодня:</span>
+                        <strong>{{ today_orders_with_subscription }}/1</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Тип питания:</span>
+                        <strong>{{ meal_type }}</strong>
+                    </li>
+                </ul>
+
+                {% if active_subscription %}
+                <div class="alert alert-success mt-3 small">
+                    <h6><i class="bi bi-ticket-perforated"></i> Активный абонемент</h6>
+                    <p class="mb-1">
+                        Тип: {{ active_subscription.meal_type }}<br>
+                        Действует до: {{ active_subscription.end_date.strftime('%d.%m.%Y') }}<br>
+                        Использовано на неделе: {{ active_subscription.used_meals }}/{{ active_subscription.meals_per_week }}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>Доступные блюда ({{ meal_type }})</h5>
+                <span class="badge bg-primary">{{ available_meals|length }}</span>
+            </div>
+            <div class="card-body">
+                {% if available_meals %}
+                <div class="list-group">
+                    {% for meal in available_meals %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ meal.name }}</strong>
+                                <br>
+                                <small class="text-muted">{{ meal.description|truncate(50) }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-primary">{{ meal.get_available_quantity() }} порций</span>
+                                <br>
+                                <strong>{{ "%.2f"|format(meal.price) }} ₽</strong>
+                            </div>
+                        </div>
+
+                        <!-- Информация о приготовленных порциях -->
+                        {% set prepared_info = meal.get_prepared_meals_info() %}
+                        {% if prepared_info %}
+                        <div class="mt-2 small">
+                            <i class="bi bi-info-circle text-info"></i>
+                            <small>
+                                {% for info in prepared_info %}
+                                    {{ info.quantity }} пор. (до {{ info.expiry_date.strftime('%d.%m') }}){% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Предупреждение если мало порций -->
+                {% set low_stock_meals = [] %}
+                {% for meal in available_meals %}
+                    {% if meal.get_available_quantity() <= 2 %}
+                        {% set _ = low_stock_meals.append(meal) %}
+                    {% endif %}
+                {% endfor %}
+
+                {% if low_stock_meals|length > 0 %}
+                <div class="alert alert-warning mt-3 small">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Мало порций:</strong>
+                    {% for meal in low_stock_meals %}
+                        {{ meal.name }} ({{ meal.get_available_quantity() }}){% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Нет доступных блюд</strong>
+                    <p class="mb-0 small">Повар еще не приготовил блюда для {{ meal_type }}. Зайдите позже.</p>
+                </div>
+                {% endif %}
+
+                {% if drinks %}
+                <hr>
+                <h6>Напитки:</h6>
+                <div class="list-group">
+                    {% for drink in drinks %}
+                    <div class="list-group-item d-flex justify-content-between">
+                        {{ drink.name }}
+                        <span>{{ "%.2f"|format(drink.price) }} ₽</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const mealSelect = document.getElementById('meal_id');
+    const drinkSelect = document.getElementById('drink_id');
+    const paymentMethod = document.getElementById('paymentMethod');
+    const priceDetails = document.getElementById('priceDetails');
+    const totalPrice = document.getElementById('totalPrice');
+    const priceInfo = document.getElementById('priceInfo');
+    const mealAvailability = document.getElementById('mealAvailability');
+    const submitButton = document.getElementById('submitButton');
+    const orderForm = document.getElementById('orderForm');
+    const noPortionsWarning = document.getElementById('noPortionsWarning');
+
+    function updateMealAvailability() {
+        const mealOption = mealSelect.options[mealSelect.selectedIndex];
+        const availableQuantity = mealOption ? parseInt(mealOption.dataset.available) : 0;
+
+        if (mealOption && mealOption.value) {
+            if (availableQuantity <= 0) {
+                mealAvailability.innerHTML = '<span class="text-danger">❌ Это блюдо временно недоступно. Нет приготовленных порций.</span>';
+                noPortionsWarning.style.display = 'block';
+                submitButton.disabled = true;
+                submitButton.classList.add('btn-secondary');
+                submitButton.classList.remove('btn-primary');
+            } else {
+                mealAvailability.innerHTML = `<span class="text-success">✅ Доступно ${availableQuantity} порций</span>`;
+                noPortionsWarning.style.display = 'none';
+                submitButton.disabled = false;
+                submitButton.classList.remove('btn-secondary');
+                submitButton.classList.add('btn-primary');
+            }
+        } else {
+            mealAvailability.innerHTML = '';
+            noPortionsWarning.style.display = 'none';
+            submitButton.disabled = true;
+            submitButton.classList.add('btn-secondary');
+            submitButton.classList.remove('btn-primary');
+        }
+    }
+
+    function calculatePrice() {
+        const mealOption = mealSelect.options[mealSelect.selectedIndex];
+        const drinkOption = drinkSelect ? drinkSelect.options[drinkSelect.selectedIndex] : null;
+        const paymentMethodValue = paymentMethod.value;
+
+        let mealPrice = 0;
+        let drinkPrice = 0;
+
+        if (mealOption && mealOption.value && mealOption.dataset.price) {
+            mealPrice = parseFloat(mealOption.dataset.price);
+        }
+
+        if (drinkOption && drinkOption.value && drinkOption.dataset.price) {
+            drinkPrice = parseFloat(drinkOption.dataset.price);
+        }
+
+        const total = mealPrice + drinkPrice;
+
+        if (mealPrice > 0 || drinkPrice > 0) {
+            let details = '';
+            if (mealPrice > 0) {
+                details += `Блюдо: ${mealPrice} руб.`;
+            }
+            if (drinkPrice > 0) {
+                if (details) details += '<br>';
+                details += `Напиток: ${drinkPrice} руб.`;
+            }
+            priceDetails.innerHTML = details;
+
+            if (paymentMethodValue === 'абонемент') {
+                totalPrice.textContent = 'Бесплатно по абонементу';
+                priceInfo.className = 'alert alert-success mb-3';
+            } else {
+                totalPrice.textContent = `${total} руб.`;
+                priceInfo.className = 'alert alert-info mb-3';
+            }
+        } else {
+            priceDetails.textContent = 'Выберите блюдо и напиток для расчета';
+            totalPrice.textContent = '0 руб.';
+            priceInfo.className = 'alert alert-info mb-3';
+        }
+    }
+
+    orderForm.addEventListener('submit', function(e) {
+        const mealOption = mealSelect.options[mealSelect.selectedIndex];
+        const availableQuantity = mealOption ? parseInt(mealOption.dataset.available) : 0;
+
+        if (!mealOption || !mealOption.value || mealOption.value === "0") {
+            e.preventDefault();
+            alert('Выберите основное блюдо!');
+            return false;
+        }
+
+        if (availableQuantity <= 0) {
+            e.preventDefault();
+            alert('Это блюдо временно недоступно. Выберите другое блюдо.');
+            return false;
+        }
+
+        // Проверяем выбранную дату
+        const mealDateInput = document.querySelector('input[name="meal_date"]');
+        if (mealDateInput) {
+            const selectedDate = new Date(mealDateInput.value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (selectedDate < today) {
+                e.preventDefault();
+                alert('Нельзя заказать питание на прошедшую дату!');
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    mealSelect.addEventListener('change', function() {
+        updateMealAvailability();
+        calculatePrice();
+    });
+
+    if (drinkSelect) {
+        drinkSelect.addEventListener('change', calculatePrice);
+    }
+
+    paymentMethod.addEventListener('change', calculatePrice);
+
+    // Инициализация
+    updateMealAvailability();
+    calculatePrice();
+
+    // Проверяем дату при изменении
+    const mealDateInput = document.querySelector('input[name="meal_date"]');
+    if (mealDateInput) {
+        mealDateInput.addEventListener('change', function() {
+            const selectedDate = new Date(this.value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (selectedDate < today) {
+                alert('Нельзя заказать питание на прошедшую дату! Дата автоматически изменена на сегодня.');
+                this.value = today.toISOString().split('T')[0];
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

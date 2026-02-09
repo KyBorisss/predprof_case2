@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+
+{% block title %}Приготовление блюд - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Приготовление блюд</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('chef_dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Приготовить новое блюдо</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="prepareMealForm">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        <label class="form-label">Выберите блюдо:</label>
+                        <select class="form-select {% if form.meal_id.errors %}is-invalid{% endif %}"
+                                name="meal_id" id="mealSelect" required>
+                            <option value="">Выберите блюдо...</option>
+                            {% for meal in available_meals %}
+                            <option value="{{ meal.id }}">
+                                {{ meal.name }} - {{ meal.price }} руб. ({{ meal.meal_type }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.meal_id.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.meal_id.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Количество порций:</label>
+                        <input type="number" class="form-control {% if form.quantity.errors %}is-invalid{% endif %}"
+                               name="quantity" id="quantityInput"
+                               value="{{ form.quantity.data or '1' }}" min="1" max="100" required>
+                        {% if form.quantity.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.quantity.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="text-muted">Минимум 1, максимум 100 порций</small>
+                    </div>
+
+                    <div id="ingredientsInfo" class="mb-3">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            Выберите блюдо и количество порций, чтобы увидеть необходимые ингредиенты
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Срок годности:</label>
+                        <input type="date" class="form-control" name="expiry_date"
+                               value="{{ date.today().isoformat() }}"
+                               min="{{ date.today().isoformat() }}">
+                        <small class="text-muted">Дата, до которой блюдо будет доступно для заказа</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Примечания:</label>
+                        <textarea class="form-control" name="notes" rows="3"
+                                  placeholder="Особенности приготовления, ингредиенты и т.д.">{{ form.notes.data or '' }}</textarea>
+                    </div>
+
+                    <div id="missingIngredientsAlert" class="alert alert-danger d-none mb-3">
+                        <h6><i class="bi bi-exclamation-triangle"></i> Недостаточно ингредиентов!</h6>
+                        <div id="missingIngredientsList"></div>
+                        <div class="mt-2">
+                            <a href="{{ url_for('purchase_request') }}" class="btn btn-warning btn-sm">
+                                <i class="bi bi-cart-plus"></i> Создать заявку на закупку
+                            </a>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100" id="prepareButton" disabled>
+                        <i class="bi bi-egg-fried"></i> Приготовить
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="bi bi-list-check"></i> Необходимые ингредиенты</h5>
+            </div>
+            <div class="card-body">
+                <div id="currentIngredientsPanel">
+                    <div class="alert alert-secondary">
+                        <i class="bi bi-info-circle"></i>
+                        Сначала выберите блюдо и количество порций
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Текущие запасы ингредиентов</h5>
+            </div>
+            <div class="card-body">
+                {% if inventory_items %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Ингредиент</th>
+                                <th>Доступно</th>
+                                <th>Единица</th>
+                                <th>Минимум</th>
+                                <th>Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in inventory_items %}
+                            <tr class="{% if item.quantity <= item.min_quantity %}table-warning{% endif %}">
+                                <td>{{ item.ingredient }}</td>
+                                <td>{{ "%.2f"|format(item.quantity) }}</td>
+                                <td>{{ item.unit }}</td>
+                                <td>{{ "%.2f"|format(item.min_quantity) }}</td>
+                                <td>
+                                    {% if item.quantity <= item.min_quantity * 0.5 %}
+                                        <span class="badge bg-danger">Критично</span>
+                                    {% elif item.quantity <= item.min_quantity %}
+                                        <span class="badge bg-warning">Низкий</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Норма</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="alert alert-info mt-2">
+                    <small>
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Критично:</strong> менее 50% от минимального запаса<br>
+                        <strong>Низкий:</strong> от 50% до 100% от минимального запаса<br>
+                        <strong>Норма:</strong> выше минимального запаса
+                    </small>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Нет данных об ингредиентах
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function loadMealIngredients(mealId, portions) {
+    if (!mealId) {
+        return Promise.reject('Не выбрано блюдо');
+    }
+
+    return fetch(`/api/meal/${mealId}/ingredients?portions=${portions}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Ошибка загрузки данных');
+            }
+            return response.json();
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            throw error;
+        });
+}
+
+function updateIngredientsInfo() {
+    const mealSelect = document.getElementById('mealSelect');
+    const quantityInput = document.getElementById('quantityInput');
+    const prepareButton = document.getElementById('prepareButton');
+    const currentIngredientsPanel = document.getElementById('currentIngredientsPanel');
+    const ingredientsInfo = document.getElementById('ingredientsInfo');
+    const missingIngredientsAlert = document.getElementById('missingIngredientsAlert');
+    const missingIngredientsList = document.getElementById('missingIngredientsList');
+
+    const mealId = parseInt(mealSelect.value);
+    const quantity = parseInt(quantityInput.value) || 1;
+
+    if (!mealId) {
+        currentIngredientsPanel.innerHTML = `
+            <div class="alert alert-secondary">
+                <i class="bi bi-info-circle"></i>
+                Сначала выберите блюдо и количество порций
+            </div>`;
+        ingredientsInfo.innerHTML = `
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                Выберите блюдо, чтобы увидеть необходимые ингредиенты
+            </div>`;
+        prepareButton.disabled = true;
+        missingIngredientsAlert.classList.add('d-none');
+        return;
+    }
+
+    currentIngredientsPanel.innerHTML = `
+        <div class="text-center py-3">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Загрузка...</span>
+            </div>
+            <p class="mt-2">Загрузка данных об ингредиентах...</p>
+        </div>`;
+
+    loadMealIngredients(mealId, quantity)
+        .then(data => {
+            if (!data.ingredients || data.ingredients.length === 0) {
+                currentIngredientsPanel.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Нет информации об ингредиентах для этого блюда
+                    </div>`;
+                prepareButton.disabled = true;
+                missingIngredientsAlert.classList.add('d-none');
+                return;
+            }
+
+            const mealName = data.meal_name || 'Блюдо';
+            const ingredients = data.ingredients;
+
+            let html = `<h6>Для приготовления <strong>${quantity}</strong> порций <strong>"${mealName}"</strong> требуется:</h6>`;
+            html += '<div class="table-responsive mt-3"><table class="table table-sm table-bordered">';
+            html += '<thead class="table-light"><tr><th>Ингредиент</th><th>На ' + quantity + ' порций</th><th>Доступно</th><th>Статус</th></tr></thead><tbody>';
+
+            let canPrepare = true;
+            let missingIngredients = [];
+
+            ingredients.forEach(ingredient => {
+                const requiredTotal = ingredient.quantity_required;
+                const available = ingredient.available;
+                const unit = ingredient.unit;
+                const hasEnough = available >= requiredTotal;
+
+                if (!hasEnough) {
+                    canPrepare = false;
+                    const missingAmount = requiredTotal - available;
+                    missingIngredients.push({
+                        name: ingredient.name,
+                        missing: missingAmount,
+                        unit: unit,
+                        required: requiredTotal,
+                        available: available
+                    });
+                }
+
+                html += `<tr class="${hasEnough ? '' : 'table-danger'}">`;
+                html += `<td><strong>${ingredient.name}</strong></td>`;
+                html += `<td><strong>${requiredTotal.toFixed(3)} ${unit}</strong></td>`;
+                html += `<td>${available.toFixed(3)} ${unit}</td>`;
+                html += `<td>`;
+                if (hasEnough) {
+                    html += '<span class="badge bg-success">✓ Достаточно</span>';
+                } else {
+                    html += '<span class="badge bg-danger">✗ Недостаточно</span>';
+                }
+                html += `</td></tr>`;
+            });
+
+            html += '</tbody></table></div>';
+
+            if (canPrepare) {
+                html += `
+                    <div class="alert alert-success mt-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill me-2 fs-4"></i>
+                            <div>
+                                <h6 class="mb-1">Можно приготовить ${quantity} порций</h6>
+                                <p class="mb-0 small">Все необходимые ингредиенты в наличии</p>
+                            </div>
+                        </div>
+                    </div>`;
+                prepareButton.disabled = false;
+                ingredientsInfo.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle"></i>
+                        Можно приготовить ${quantity} порций. Все ингредиенты в наличии.
+                    </div>`;
+                missingIngredientsAlert.classList.add('d-none');
+            } else {
+                html += `
+                    <div class="alert alert-danger mt-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
+                            <div>
+                                <h6 class="mb-1">Недостаточно ингредиентов</h6>
+                                <p class="mb-0 small">Невозможно приготовить ${quantity} порций</p>
+                            </div>
+                        </div>
+                    </div>`;
+                prepareButton.disabled = true;
+                ingredientsInfo.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Недостаточно ингредиентов для приготовления ${quantity} порций
+                    </div>`;
+
+                if (missingIngredients.length > 0) {
+                    let missingHtml = '<ul class="mb-0">';
+                    missingIngredients.forEach(item => {
+                        missingHtml += `<li><strong>${item.name}:</strong> недостаёт ${item.missing.toFixed(3)} ${item.unit} (нужно: ${item.required.toFixed(3)}, есть: ${item.available.toFixed(3)})</li>`;
+                    });
+                    missingHtml += '</ul>';
+                    missingIngredientsList.innerHTML = missingHtml;
+                    missingIngredientsAlert.classList.remove('d-none');
+                }
+            }
+
+            currentIngredientsPanel.innerHTML = html;
+
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки ингредиентов:', error);
+            currentIngredientsPanel.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Ошибка загрузки данных об ингредиентах. Пожалуйста, попробуйте снова.
+                </div>`;
+            prepareButton.disabled = true;
+            missingIngredientsAlert.classList.add('d-none');
+        });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const mealSelect = document.getElementById('mealSelect');
+    const quantityInput = document.getElementById('quantityInput');
+    const prepareButton = document.getElementById('prepareButton');
+
+    document.getElementById('prepareMealForm').addEventListener('submit', function(e) {
+        const mealId = parseInt(mealSelect.value);
+        const quantity = parseInt(quantityInput.value) || 1;
+
+        if (!mealId) {
+            e.preventDefault();
+            alert('Выберите блюдо!');
+            return false;
+        }
+
+        if (quantity <= 0 || quantity > 100) {
+            e.preventDefault();
+            alert('Количество порций должно быть от 1 до 100!');
+            return false;
+        }
+
+        if (prepareButton.disabled) {
+            e.preventDefault();
+            alert('Недостаточно ингредиентов для приготовления этого блюда!');
+            return false;
+        }
+
+        const expiryDateInput = document.querySelector('input[name="expiry_date"]');
+        if (expiryDateInput) {
+            const selectedDate = new Date(expiryDateInput.value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (selectedDate < today) {
+                e.preventDefault();
+                alert('Срок годности не может быть в прошлом!');
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    mealSelect.addEventListener('change', updateIngredientsInfo);
+    quantityInput.addEventListener('input', updateIngredientsInfo);
+
+    quantityInput.addEventListener('change', function() {
+        if (this.value > 100) {
+            this.value = 100;
+        }
+        if (this.value < 1) {
+            this.value = 1;
+        }
+        updateIngredientsInfo();
+    });
+
+    updateIngredientsInfo();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Панель администратора - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Панель администратора</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Всего пользователей</h6>
+                        <h2 class="mb-0">{{ total_users }}</h2>
+                    </div>
+                    <i class="bi bi-people display-6"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Заказов сегодня</h6>
+                        <h2 class="mb-0">{{ total_orders_today }}</h2>
+                    </div>
+                    <i class="bi bi-cart-check display-6"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Выручка сегодня</h6>
+                        <h2 class="mb-0">{{ "%.2f"|format(total_revenue_today) }} ₽</h2>
+                    </div>
+                    <i class="bi bi-currency-ruble display-6"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Ожидает заявок</h6>
+                        <h2 class="mb-0">{{ pending_requests }}</h2>
+                    </div>
+                    <i class="bi bi-clock display-6"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Быстрые действия</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('manage_requests') }}" class="btn btn-outline-warning w-100">
+                            <i class="bi bi-clipboard-check"></i><br>
+                            Управление заявками
+                            {% if pending_requests > 0 %}
+                            <span class="badge bg-danger mt-1">{{ pending_requests }} новых</span>
+                            {% endif %}
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('statistics') }}" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-graph-up"></i><br>
+                            Статистика
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('inventory') }}" class="btn btn-outline-success w-100">
+                            <i class="bi bi-box-seam"></i><br>
+                            Инвентарь
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('reports') }}" class="btn btn-outline-info w-100">
+                            <i class="bi bi-file-earmark-text"></i><br>
+                            Отчеты
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('admin_users') }}" class="btn btn-outline-secondary w-100">
+                            <i class="bi bi-gear"></i><br>
+                            Настройки<br>
+                            <small>Пользователи</small>
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('menu') }}" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-menu-button-wide"></i><br>
+                            Просмотр меню
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Информация о системе</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <tbody>
+                            <tr>
+                                <td><strong>Версия системы:</strong></td>
+                                <td>1.0.0</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Дата запуска:</strong></td>
+                                <td>25.01.2026</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Всего заказов:</strong></td>
+                                <td>{{ total_all_orders }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Активных пользователей:</strong></td>
+                                <td>{{ total_users }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Активных блюд:</strong></td>
+                                <td>{{ active_meals }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Распределение по ролям</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <div class="mb-3">
+                        <span class="badge bg-primary p-2 m-1">
+                            <i class="bi bi-person"></i> Ученики: {{ students_count }}
+                        </span>
+                        <span class="badge bg-success p-2 m-1">
+                            <i class="bi bi-egg-fried"></i> Повара: {{ chefs_count }}
+                        </span>
+                        <span class="badge bg-warning p-2 m-1">
+                            <i class="bi bi-gear"></i> Администраторы: {{ admins_count }}
+                        </span>
+                    </div>
+                    <div class="progress" style="height: 20px;">
+                        {% set total = students_count + chefs_count + admins_count %}
+                        {% if total > 0 %}
+                            {% set students_percent = (students_count / total * 100)|round|int %}
+                            {% set chefs_percent = (chefs_count / total * 100)|round|int %}
+                            {% set admins_percent = (admins_count / total * 100)|round|int %}
+                            <div class="progress-bar bg-primary" style="width: {{ students_percent }}%">{{ students_percent }}%</div>
+                            <div class="progress-bar bg-success" style="width: {{ chefs_percent }}%">{{ chefs_percent }}%</div>
+                            <div class="progress-bar bg-warning" style="width: {{ admins_percent }}%">{{ admins_percent }}%</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Статус системы</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Веб-сервер
+                        <span class="badge bg-success">Работает</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        База данных
+                        <span class="badge bg-success">Подключена</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Платежная система
+                        <span class="badge bg-warning">Тестовый режим</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Уведомления
+                        <span class="badge bg-success">Активны</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

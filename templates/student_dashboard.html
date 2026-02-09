@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Панель ученика - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Панель ученика</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <span class="btn btn-sm btn-outline-secondary">Баланс: {{ "%.2f"|format(current_user.balance) }} ₽</span>
+            <span class="btn btn-sm btn-outline-secondary">Класс: {{ current_user.grade }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Мои сегодняшние заказы</h5>
+            </div>
+            <div class="card-body">
+                {% if orders %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Блюдо</th>
+                                <th>Тип</th>
+                                <th>Дата</th>
+                                <th>Цена</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders %}
+                            <tr>
+                                <td>{{ order.meal.name }}</td>
+                                <td>{{ order.meal_type }}</td>
+                                <td>{{ order.meal_date.strftime('%d.%m.%Y') }}</td>
+                                <td>{{ "%.2f"|format(order.total_price) }} ₽</td>
+                                <td>
+                                    {% if order.status == 'served' %}
+                                        <span class="badge bg-success">Получено</span>
+                                    {% elif order.status == 'paid' %}
+                                        <span class="badge bg-info">Оплачено</span>
+                                    {% elif order.status == 'pending' %}
+                                        <span class="badge bg-warning">Ожидает оплаты</span>
+                                    {% elif order.status == 'cancelled' %}
+                                        <span class="badge bg-danger">Отменен</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if order.status == 'pending' %}
+                                        <a href="{{ url_for('pay_order', order_id=order.id) }}"
+                                           class="btn btn-sm btn-success"
+                                           onclick="return confirm('Оплатить заказ #{{ order.id }} на сумму {{ "%.2f"|format(order.total_price) }} ₽?')">
+                                            <i class="bi bi-credit-card"></i> Оплатить
+                                        </a>
+                                    {% elif order.status == 'paid' and not order.is_served %}
+                                        <a href="{{ url_for('receive_order', order_id=order.id) }}"
+                                           class="btn btn-sm btn-primary"
+                                           onclick="return confirm('Отметить получение заказа #{{ order.id }} ({{ order.meal.name }})?')">
+                                            <i class="bi bi-check-circle"></i> Получить
+                                        </a>
+                                    {% elif order.status == 'served' %}
+                                        <span class="text-success small">
+                                            <i class="bi bi-check2-all"></i> Получено
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">У вас нет заказов на сегодня.</p>
+                <a href="{{ url_for('order') }}" class="btn btn-primary">Заказать питание</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Быстрые действия</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('menu') }}" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-menu-button-wide"></i><br>
+                            Просмотреть меню
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('order') }}" class="btn btn-outline-success w-100">
+                            <i class="bi bi-cart-plus"></i><br>
+                            Заказать питание
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('allergies') }}" class="btn btn-outline-warning w-100">
+                            <i class="bi bi-heart-pulse"></i><br>
+                            Мои аллергии
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('feedback') }}" class="btn btn-outline-info w-100">
+                            <i class="bi bi-chat-left-text"></i><br>
+                            Оставить отзыв
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('add_balance') }}" class="btn btn-outline-success w-100">
+                            <i class="bi bi-wallet2"></i><br>
+                            Пополнить баланс
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('buy_subscription') }}" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-ticket-perforated"></i><br>
+                            Купить абонемент
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header"><h5>Мой абонемент</h5></div>
+            <div class="card-body">
+            {% if active_subscription %}
+            <div class="alert alert-success">
+                <h6><i class="bi bi-ticket-perforated"></i> Активен</h6>
+                <p class="mb-1 small">
+                    {{ active_subscription.meal_type|capitalize }} до {{ active_subscription.end_date.strftime('%d.%m.%Y') }}
+                </p>
+                <div class="progress mb-2">
+                    <div class="progress-bar" style="width: {{ (active_subscription.used_meals / active_subscription.meals_per_week * 100)|round }}%">
+                        {{ active_subscription.used_meals }}/{{ active_subscription.meals_per_week }}
+                    </div>
+                </div>
+                <small class="text-muted">Осталось приемов на неделе: {{ active_subscription.meals_per_week - active_subscription.used_meals }}</small>
+            </div>
+            {% else %}
+            <p class="text-muted small">Нет активного абонемента</p>
+            <a href="{{ url_for('buy_subscription') }}" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-ticket-perforated"></i> Купить абонемент
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Моя статистика</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Потрачено всего
+                        <span class="badge bg-primary rounded-pill">{{ "%.2f"|format(total_spent) }} ₽</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Баланс
+                        <span class="badge bg-success rounded-pill">{{ "%.2f"|format(current_user.balance) }} ₽</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Заказов сегодня
+                        <span class="badge bg-info rounded-pill">{{ orders|length }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Получено сегодня
+                        <span class="badge bg-success rounded-pill">{{ orders|selectattr('status', 'equalto', 'served')|list|length }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Активных аллергий
+                        <span class="badge bg-warning rounded-pill">{{ current_user.allergies.count() }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Последние уведомления</h5>
+            </div>
+            <div class="card-body">
+                {% if notifications %}
+                <div class="list-group">
+                    {% for notification in notifications %}
+                    <a href="{{ url_for('notifications') }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ notification.title }}</h6>
+                            <small>{{ notification.created_at.strftime('%H:%M') }}</small>
+                        </div>
+                        <p class="mb-1 small">{{ notification.message|truncate(50) }}</p>
+                    </a>
+                    {% endfor %}
+                </div>
+                <a href="{{ url_for('notifications') }}" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                    Все уведомления
+                </a>
+                {% else %}
+                <p class="text-muted">Нет новых уведомлений</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

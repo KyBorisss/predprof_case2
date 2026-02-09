@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Уведомления - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Мои уведомления</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button class="btn btn-sm btn-outline-secondary" onclick="markAllAsRead()">
+            <i class="bi bi-check-all"></i> Прочитать все
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>Все уведомления</h5>
+                <span class="badge bg-primary">{{ notifications|length }}</span>
+            </div>
+            <div class="card-body">
+                {% if notifications %}
+                <div class="list-group">
+                    {% for notification in notifications %}
+                    <div class="list-group-item list-group-item-action {% if not notification.is_read %}list-group-item-primary{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <div>
+                                <h6 class="mb-1">{{ notification.title }}</h6>
+                                <p class="mb-1">{{ notification.message }}</p>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">{{ notification.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                                <br>
+                                <span class="badge bg-{% if notification.type == 'оплата' %}success{% elif notification.type == 'заказ' %}primary{% else %}secondary{% endif %}">
+                                    {{ notification.type }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-bell display-4 text-muted"></i>
+                    <h5 class="mt-3">Уведомлений нет</h5>
+                    <p class="text-muted">Здесь будут появляться важные сообщения системы.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function markAllAsRead() {
+    // В реальной системе здесь был бы AJAX запрос
+    alert('Все уведомления помечены как прочитанные!');
+    window.location.reload();
+}
+</script>
+{% endblock %}

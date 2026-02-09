@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Управление заявками - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Управление заявками на закупку</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Все заявки</h5>
+            </div>
+            <div class="card-body">
+                {% if purchase_requests %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Продукт</th>
+                                <th>Количество</th>
+                                <th>Запросил</th>
+                                <th>Дата</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for req in purchase_requests %}
+                            <tr class="{% if req.status == 'на рассмотрении' %}table-warning{% elif req.status == 'одобрена' %}table-success{% elif req.status == 'отклонена' %}table-danger{% endif %}">
+                                <td>#{{ req.id }}</td>
+                                <td>
+                                    <strong>{{ req.ingredient }}</strong>
+                                    {% if req.notes %}
+                                    <br>
+                                    <small class="text-muted">{{ req.notes|truncate(50) }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ req.quantity }} {{ req.unit }}</td>
+                                <td>
+                                    {% if req.requested_by_user %}
+                                        {{ req.requested_by_user.username }}
+                                        <br>
+                                        <small class="text-muted">{{ req.requested_by_user.role }}</small>
+                                    {% else %}
+                                        <span class="text-muted">Не указан</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ req.requested_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                                <td>
+                                    <span class="badge bg-{% if req.status == 'одобрена' %}success{% elif req.status == 'отклонена' %}danger{% else %}warning{% endif %}">
+                                        {{ req.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if req.status == 'на рассмотрении' %}
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('approve_request', request_id=req.id) }}" class="btn btn-success" onclick="return confirm('Одобрить заявку #{{ req.id }}?')">
+                                            <i class="bi bi-check"></i> Одобрить
+                                        </a>
+                                        <a href="{{ url_for('reject_request', request_id=req.id) }}" class="btn btn-danger" onclick="return confirm('Отклонить заявку #{{ req.id }}?')">
+                                            <i class="bi bi-x"></i> Отклонить
+                                        </a>
+                                    </div>
+                                    {% elif req.status == 'одобрена' %}
+                                    <span class="text-success">
+                                        <i class="bi bi-check-circle"></i> Одобрено
+                                        {% if req.approved_at %}
+                                        <br>
+                                        <small>{{ req.approved_at.strftime('%d.%m.%Y') }}</small>
+                                        {% endif %}
+                                    </span>
+                                    {% elif req.status == 'отклонена' %}
+                                    <span class="text-danger">
+                                        <i class="bi bi-x-circle"></i> Отклонено
+                                    </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-3">
+                    <h6>Статистика по статусам:</h6>
+                    <div class="btn-group" role="group">
+                        {% set pending_count = purchase_requests|selectattr('status', 'equalto', 'на рассмотрении')|list|length %}
+                        {% set approved_count = purchase_requests|selectattr('status', 'equalto', 'одобрена')|list|length %}
+                        {% set rejected_count = purchase_requests|selectattr('status', 'equalto', 'отклонена')|list|length %}
+
+                        <button type="button" class="btn btn-warning">
+                            На рассмотрении <span class="badge bg-dark">{{ pending_count }}</span>
+                        </button>
+                        <button type="button" class="btn btn-success">
+                            Одобрены <span class="badge bg-dark">{{ approved_count }}</span>
+                        </button>
+                        <button type="button" class="btn btn-danger">
+                            Отклонены <span class="badge bg-dark">{{ rejected_count }}</span>
+                        </button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-clipboard-check display-4 text-muted"></i>
+                    <h5 class="mt-3">Заявок пока нет</h5>
+                    <p class="text-muted">Повара еще не создавали заявки на закупку продуктов.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Меню - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Меню питания</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="?type=завтрак" class="btn btn-sm {% if meal_type == 'завтрак' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                Завтраки
+            </a>
+            <a href="?type=обед" class="btn btn-sm {% if meal_type == 'обед' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                Обеды
+            </a>
+        </div>
+        <div class="ms-2">
+            <span class="badge bg-success">Доступно: {{ meals|length }}</span>
+            {% if total_meals and total_meals > meals|length %}
+                <span class="badge bg-warning">Нет в наличии: {{ total_meals - meals|length }}</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if meals %}
+<div class="row">
+    {% for meal in meals %}
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <h5 class="card-title">{{ meal.name }}</h5>
+                    <div class="text-end">
+                        <span class="badge bg-primary">{{ "%.2f"|format(meal.price) }} ₽</span>
+                        <span class="badge bg-success ms-1">{{ meal.get_available_quantity() }} порций</span>
+                    </div>
+                </div>
+                <p class="card-text">{{ meal.description }}</p>
+
+                <div class="mb-3">
+                    <small class="text-muted">
+                        <i class="bi bi-fire"></i> {{ meal.calories }} ккал
+                    </small>
+                    {% if meal.allergens %}
+                    <br>
+                    <small class="text-danger">
+                        <i class="bi bi-exclamation-triangle"></i> Аллергены: {{ meal.allergens }}
+                    </small>
+                    {% endif %}
+                </div>
+
+                <h6>Ингредиенты:</h6>
+                <p class="small">{{ meal.ingredients|truncate(100) }}</p>
+
+                <!-- Информация о доступных порциях -->
+                <div class="alert alert-info small mt-2">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Доступно порций:</strong> {{ meal.get_available_quantity() }}
+                    {% set prepared_info = meal.get_prepared_meals_info() %}
+                    {% if prepared_info %}
+                        <br>
+                        <small>
+                            {% for info in prepared_info %}
+                                {{ info.quantity }} пор. (годно до: {{ info.expiry_date.strftime('%d.%m.%Y') }}){% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        </small>
+                    {% endif %}
+                </div>
+
+                {% if current_user.role == 'ученик' %}
+                <a href="{{ url_for('order', type=meal.meal_type) }}" class="btn btn-primary">
+                    <i class="bi bi-cart-plus"></i> Заказать
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="col-12">
+    <div class="alert alert-warning">
+        <h4 class="alert-heading">
+            <i class="bi bi-exclamation-triangle"></i>
+            {% if total_meals and total_meals > 0 %}
+                Блюда для {{ meal_type }}а есть в меню, но пока не приготовлены
+            {% else %}
+                Нет блюд для {{ meal_type }}а в меню
+            {% endif %}
+        </h4>
+        <p>
+            {% if total_meals and total_meals > 0 %}
+                В меню есть {{ total_meals }} блюд(а) для {{ meal_type }}а, но повар еще не приготовил их.
+                Пожалуйста, зайдите позже или выберите другой тип питания.
+            {% else %}
+                Администратор еще не добавил блюда для {{ meal_type }}а в меню.
+            {% endif %}
+        </p>
+
+        <div class="mt-3">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Назад в панель
+            </a>
+            {% if meal_type == 'завтрак' %}
+                <a href="?type=обед" class="btn btn-outline-primary ms-2">
+                    Посмотреть обеды
+                </a>
+            {% else %}
+                <a href="?type=завтрак" class="btn btn-outline-primary ms-2">
+                    Посмотреть завтраки
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Статистика доступности -->
+{% if meals or (total_meals and total_meals > 0) %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h5>Статистика доступности</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Всего блюд в меню:</span>
+                    <span class="badge bg-secondary">{{ total_meals or 0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Доступно для заказа:</span>
+                    <span class="badge bg-success">{{ meals|length }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Нет в наличии:</span>
+                    <span class="badge bg-warning">{{ (total_meals or 0) - meals|length }}</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="progress" style="height: 30px;">
+                    {% set total = total_meals or 1 %}
+                    {% set available_percent = ((meals|length / total) * 100)|round|int %}
+                    {% set not_available_percent = 100 - available_percent %}
+                    <div class="progress-bar bg-success" style="width: {{ available_percent }}%">
+                        {{ available_percent }}% доступно
+                    </div>
+                    <div class="progress-bar bg-warning" style="width: {{ not_available_percent }}%">
+                        {{ not_available_percent }}% нет в наличии
+                    </div>
+                </div>
+                <small class="text-muted mt-2 d-block">
+                    <i class="bi bi-info-circle"></i>
+                    Отображаются только блюда, которые повар уже приготовил и которые есть в наличии.
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Заявка на закупку недостающих ингредиентов - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Заявка на закупку недостающих ингредиентов</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('prepare_meal') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад к приготовлению
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-4">
+            <div class="card-header bg-warning">
+                <h5>Информация о блюде</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Блюдо:</strong> {{ meal.name }}</p>
+                        <p><strong>Количество порций:</strong> {{ portions }}</p>
+                        <p><strong>Тип:</strong> {{ meal.meal_type }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            Для приготовления {{ portions }} порций {{ meal.name }} недостаточно следующих ингредиентов:
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Создание заявок на закупку</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+
+                    <div class="table-responsive mb-4">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Ингредиент</th>
+                                    <th>Недостаёт</th>
+                                    <th>Требуется для заявки</th>
+                                    <th>Единица</th>
+                                    <th>Примечания</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ingredient in missing_ingredients %}
+                                <tr>
+                                    <td>{{ ingredient.name }}</td>
+                                    <td>
+                                        <span class="badge bg-danger">
+                                            {{ "%.2f"|format(ingredient.needed) }} {{ ingredient.unit }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="input-group">
+                                            <input type="number"
+                                                   class="form-control"
+                                                   name="quantity_{{ loop.index0 }}"
+                                                   value="{{ (ingredient.needed * 1.5)|round(2) }}"
+                                                   min="{{ ingredient.needed }}"
+                                                   step="0.01"
+                                                   required>
+                                            <span class="input-group-text">{{ ingredient.unit }}</span>
+                                        </div>
+                                        <small class="text-muted">Рекомендуется заказать с запасом</small>
+                                    </td>
+                                    <td>{{ ingredient.unit }}</td>
+                                    <td>
+                                        <input type="text"
+                                               class="form-control"
+                                               name="notes_{{ loop.index0 }}"
+                                               placeholder="Срочность, поставщик...">
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-lightbulb"></i> Совет:</h6>
+                        <ul class="mb-0">
+                            <li>Заказывайте ингредиенты с запасом для будущих приготовлений</li>
+                            <li>Укажите срочность заявки в примечаниях</li>
+                            <li>После утверждения заявки ингредиенты автоматически поступят на склад</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send"></i> Создать заявки на закупку
+                        </button>
+                        <a href="{{ url_for('prepare_meal') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

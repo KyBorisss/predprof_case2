@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Редактирование отзыва - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Редактирование отзыва</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('feedback') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад к отзывам
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Редактировать отзыв</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="editFeedbackForm">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Выберите блюдо:</label>
+                        <select class="form-select {% if form.meal_id.errors %}is-invalid{% endif %}"
+                                name="meal_id" id="meal_id" required>
+                            <option value="">-- Выберите блюдо --</option>
+                            {% for meal_id, meal_name in form.meal_id.choices %}
+                            <option value="{{ meal_id }}"
+                                    {% if form.meal_id.data|string == meal_id|string %}selected{% endif %}>
+                                {{ meal_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.meal_id.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.meal_id.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="text-muted">Выберите блюдо, на которое оставляете отзыв</small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Оценка:</label>
+                        <div class="rating-container mb-2">
+                            <div class="star-rating">
+                                {% for i in range(5, 0, -1) %}
+                                <input type="radio" id="star{{ i }}" name="rating" value="{{ i }}"
+                                       {% if form.rating.data and form.rating.data|int == i %}checked{% endif %} required>
+                                <label for="star{{ i }}" title="{{ i }} звезд">
+                                    <i class="bi bi-star{% if form.rating.data and form.rating.data|int >= i %}-fill text-warning{% endif %}"></i>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% if form.rating.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.rating.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="rating-labels d-flex justify-content-between mt-1">
+                            <small class="text-muted">Плохо</small>
+                            <small class="text-muted">Отлично</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Комментарий:</label>
+                        <textarea class="form-control {% if form.comment.errors %}is-invalid{% endif %}"
+                                  name="comment" id="comment" rows="5"
+                                  placeholder="Расскажите о вашем впечатлении: вкус, порция, сервис..."
+                                  maxlength="500">{{ form.comment.data or '' }}</textarea>
+                        {% if form.comment.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.comment.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="d-flex justify-content-between mt-1">
+                            <small class="text-muted">Ваш комментарий поможет улучшить качество питания</small>
+                            <small class="text-muted" id="charCount">{{ (form.comment.data or '')|length }}/500</small>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Вы редактируете отзыв на блюдо: <strong>{{ feedback.meal.name if feedback.meal else 'Неизвестное блюдо' }}</strong>
+                        <br>
+                        <small>Оригинальный отзыв был оставлен {{ feedback.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-2"></i> Сохранить изменения
+                        </button>
+                        <a href="{{ url_for('feedback') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-2"></i> Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i> Опасная зона</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">Вы можете удалить этот отзыв. Это действие нельзя отменить.</p>
+                <form method="POST" action="{{ url_for('delete_feedback', feedback_id=feedback.id) }}"
+                      id="deleteForm" class="text-center">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger" id="deleteButton">
+                        <i class="bi bi-trash me-2"></i> Удалить отзыв
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Стили для звездного рейтинга */
+.star-rating {
+    display: inline-block;
+    direction: rtl;
+    unicode-bidi: bidi-override;
+    font-size: 0;
+}
+
+.star-rating input {
+    display: none;
+}
+
+.star-rating label {
+    display: inline-block;
+    font-size: 2rem;
+    padding: 0 5px;
+    cursor: pointer;
+    color: #ddd;
+    transition: color 0.2s;
+}
+
+.star-rating label:hover,
+.star-rating label:hover ~ label,
+.star-rating input:checked ~ label {
+    color: #ffc107;
+}
+
+.star-rating i {
+    transition: all 0.2s;
+}
+
+/* Стили для контейнера рейтинга */
+.rating-container {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.rating-labels {
+    width: 100%;
+    padding: 0 10px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Подсчет символов в комментарии
+    const commentField = document.getElementById('comment');
+    const charCount = document.getElementById('charCount');
+
+    if (commentField && charCount) {
+        // Обновляем счетчик при вводе
+        commentField.addEventListener('input', function() {
+            const currentLength = this.value.length;
+            charCount.textContent = currentLength + '/500';
+
+            // Подсвечиваем если превышен лимит
+            if (currentLength > 500) {
+                charCount.classList.add('text-danger');
+                this.classList.add('is-invalid');
+            } else {
+                charCount.classList.remove('text-danger');
+                this.classList.remove('is-invalid');
+            }
+        });
+
+        // Триггерим событие для инициализации счетчика
+        commentField.dispatchEvent(new Event('input'));
+    }
+
+    // Интерактивные звезды
+    const stars = document.querySelectorAll('.star-rating input');
+    const starLabels = document.querySelectorAll('.star-rating label i');
+
+    // Инициализация звезд при загрузке
+    const selectedStar = document.querySelector('.star-rating input:checked');
+    const currentRating = selectedStar ? parseInt(selectedStar.value) : 0;
+
+    starLabels.forEach((icon, i) => {
+        const starNumber = 5 - i; // Так как звезды идут в обратном порядке
+        if (starNumber <= currentRating) {
+            icon.className = 'bi bi-star-fill text-warning';
+        }
+    });
+
+    stars.forEach((star, index) => {
+        star.addEventListener('change', function() {
+            const rating = parseInt(this.value);
+
+            // Обновляем иконки звезд
+            starLabels.forEach((icon, i) => {
+                const starNumber = 5 - i; // Так как звезды идут в обратном порядке
+                if (starNumber <= rating) {
+                    icon.className = 'bi bi-star-fill text-warning';
+                } else {
+                    icon.className = 'bi bi-star';
+                }
+            });
+        });
+
+        // Предварительный просмотр при наведении
+        star.addEventListener('mouseenter', function() {
+            const hoverRating = parseInt(this.value);
+            starLabels.forEach((icon, i) => {
+                const starNumber = 5 - i;
+                if (starNumber <= hoverRating) {
+                    icon.className = 'bi bi-star-fill text-warning';
+                }
+            });
+        });
+
+        star.addEventListener('mouseleave', function() {
+            const selectedRating = document.querySelector('.star-rating input:checked');
+            const currentRating = selectedRating ? parseInt(selectedRating.value) : 0;
+
+            starLabels.forEach((icon, i) => {
+                const starNumber = 5 - i;
+                if (starNumber <= currentRating) {
+                    icon.className = 'bi bi-star-fill text-warning';
+                } else {
+                    icon.className = 'bi bi-star';
+                }
+            });
+        });
+    });
+
+    // Валидация формы редактирования
+    const editFeedbackForm = document.getElementById('editFeedbackForm');
+    if (editFeedbackForm) {
+        editFeedbackForm.addEventListener('submit', function(e) {
+            const mealSelect = this.querySelector('#meal_id');
+            const ratingInput = this.querySelector('input[name="rating"]:checked');
+
+            let isValid = true;
+            let errorMessage = '';
+
+            if (!mealSelect.value) {
+                isValid = false;
+                errorMessage = 'Пожалуйста, выберите блюдо!';
+                mealSelect.focus();
+            } else if (!ratingInput) {
+                isValid = false;
+                errorMessage = 'Пожалуйста, поставьте оценку!';
+            } else if (commentField && commentField.value.length > 500) {
+                isValid = false;
+                errorMessage = 'Комментарий не должен превышать 500 символов!';
+                commentField.focus();
+            }
+
+            if (!isValid) {
+                e.preventDefault();
+                alert(errorMessage);
+                return false;
+            }
+
+            return true;
+        });
+    }
+
+    // Подтверждение удаления
+    const deleteButton = document.getElementById('deleteButton');
+    if (deleteButton) {
+        deleteButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            const mealName = "{{ feedback.meal.name if feedback.meal else 'это блюдо' }}";
+
+            if (confirm(`Вы уверены, что хотите удалить отзыв на блюдо "${mealName}"?\n\nЭто действие нельзя отменить.`)) {
+                const deleteForm = document.getElementById('deleteForm');
+                deleteForm.submit();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Заявка на закупку - Школьное питание{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Заявка на закупку продуктов</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('chef_dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Новая заявка</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        <label class="form-label">Выберите продукт:</label>
+                        <select class="form-select {% if form.ingredient_id.errors %}is-invalid{% endif %}"
+                                name="ingredient_id" id="ingredient_id" required>
+                            <option value="">-- Выберите продукт из списка --</option>
+                            {% for ingredient_id, ingredient_info in form.ingredient_id.choices %}
+                            <option value="{{ ingredient_id }}"
+                                    {% if form.ingredient_id.data == ingredient_id %}selected{% endif %}>
+                                {{ ingredient_info }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.ingredient_id.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.ingredient_id.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="text-muted">Можно выбрать только из существующих продуктов</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.quantity.label(class="form-label") }}
+                            <div class="input-group">
+                                {{ form.quantity(class="form-control", type="number", step="0.1", min="0.1") }}
+                                <span class="input-group-text" id="unitDisplay">—</span>
+                            </div>
+                            {% if form.quantity.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.quantity.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            {{ form.urgency.label(class="form-label") }}
+                            {{ form.urgency(class="form-select") }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.notes.label(class="form-label") }}
+                        {{ form.notes(class="form-control", rows=3, placeholder="Причина заявки, предпочтительный поставщик и т.д.") }}
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send"></i> Отправить заявку
+                    </button>
+                    <a href="{{ url_for('chef_dashboard') }}" class="btn btn-secondary">Отмена</a>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        {% if missing_ingredients %}
+        <div class="card mb-4">
+            <div class="card-header bg-warning">
+                <h5>Заявка для приготовления блюда</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-info-circle"></i> Информация о блюде:</h6>
+                    <p class="mb-1">
+                        <strong>Блюдо:</strong> {{ meal.name if meal else 'Неизвестно' }}<br>
+                        <strong>Порций:</strong> {{ portions }}
+                    </p>
+                </div>
+
+                <h6>Недостающие ингредиенты:</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Ингредиент</th>
+                                <th>Недостает</th>
+                                <th>Единица</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ingredient in missing_ingredients %}
+                            <tr>
+                                <td>{{ ingredient.name }}</td>
+                                <td>{{ "%.2f"|format(ingredient.needed) }}</td>
+                                <td>{{ ingredient.unit }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-lightbulb"></i>
+                    <strong>Совет:</strong> Выберите недостающие ингредиенты из списка продуктов и укажите необходимое количество.
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Информация о продуктах</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-info-circle"></i> Процесс заявки:</h6>
+                    <ol class="mb-0">
+                        <li>Выберите продукт из существующих в базе</li>
+                        <li>Укажите необходимое количество</li>
+                        <li>Администратор проверит и утвердит заявку</li>
+                        <li>После утверждения заявка передается в закупки</li>
+                        <li>По прибытии товара инвентарь обновляется</li>
+                    </ol>
+                </div>
+
+                <h6>Текущие запасы продуктов:</h6>
+                {% if existing_ingredients %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Продукт</th>
+                                <th>Доступно</th>
+                                <th>Единица</th>
+                                <th>Минимум</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in existing_ingredients %}
+                            <tr class="{% if item.quantity <= item.min_quantity %}table-warning{% endif %}">
+                                <td>{{ item.ingredient }}</td>
+                                <td>{{ "%.1f"|format(item.quantity) }}</td>
+                                <td>{{ item.unit }}</td>
+                                <td>{{ "%.1f"|format(item.min_quantity) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <small class="text-muted">Выделены продукты с низким запасом</small>
+                {% else %}
+                <p class="text-muted">Нет продуктов в базе данных</p>
+                {% endif %}
+
+                <div class="alert alert-warning mt-3 small">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Важно:</strong> Можно создавать заявки только на продукты, которые уже есть в базе данных.
+                    Для добавления новых продуктов обратитесь к администратору.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ingredientSelect = document.getElementById('ingredient_id');
+    const unitDisplay = document.getElementById('unitDisplay');
+
+    // Данные о единицах измерения продуктов
+    const ingredientData = {
+        {% for ingredient in existing_ingredients %}
+        {{ ingredient.id }}: "{{ ingredient.unit }}",
+        {% endfor %}
+    };
+
+    // Обновляем единицу измерения при выборе продукта
+    ingredientSelect.addEventListener('change', function() {
+        const selectedId = this.value;
+        if (selectedId && ingredientData[selectedId]) {
+            unitDisplay.textContent = ingredientData[selectedId];
+        } else {
+            unitDisplay.textContent = "—";
+        }
+    });
+
+    // Инициализация при загрузке
+    if (ingredientSelect.value && ingredientData[ingredientSelect.value]) {
+        unitDisplay.textContent = ingredientData[ingredientSelect.value];
+    }
+
+    // Автоматическое заполнение для недостающих ингредиентов
+    {% if missing_ingredients %}
+    // Попробуем найти и выбрать первый недостающий ингредиент
+    const missingIngredientNames = [
+        {% for ingredient in missing_ingredients %}
+        "{{ ingredient.name }}",
+        {% endfor %}
+    ];
+
+    // Ищем соответствующий продукт в списке
+    for (let i = 0; i < ingredientSelect.options.length; i++) {
+        const option = ingredientSelect.options[i];
+        for (const missingName of missingIngredientNames) {
+            if (option.text.includes(missingName)) {
+                ingredientSelect.value = option.value;
+                ingredientSelect.dispatchEvent(new Event('change'));
+                break;
+            }
+        }
+        if (ingredientSelect.value) break;
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}
